@@ -11,7 +11,9 @@
 `define   IMM_U_WIDTH   20
 `define   IMM_UJ_WIDTH  20
 
-`define   ALU_CTRL_LEN  4
-`define   IMM_CTRL_LEN  3
-`define   ALU_SRC_CTRL_LEN 3
-`define   MEM_CTRL_LEN  3
+`define   ALU_OP_LEN    4
+`define   IMM_LEN       3
+`define   ALU_SRC_LEN   3
+`define   MEM_TYPE_LEN  3
+`define   MEM_WRITE_LEN 2 
+`define   WB_FROM_LEN   2
