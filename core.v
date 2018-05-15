@@ -1,5 +1,4 @@
-module riscv_core(
-);
+module riscv_core();
 
 
 // pipeline registers
@@ -10,6 +9,9 @@ reg [(`DWIDTH - 1):0] if_id_pc;
 
 // ID / EX pipeline registers
 reg [4:0]             id_ex_rd;
+reg [4:0]             id_ex_rs1;
+reg [4:0]             id_ex_rs2;
+reg [31:0]            id_ex_pc;
 reg [(`DWIDTH - 1):0] id_ex_rs1_data;
 reg [(`DWIDTH - 1):0] id_ex_rs2_data;
 reg [(`DWIDTH - 1):0] id_ex_imm_data;
@@ -25,6 +27,8 @@ reg [(`WB_FROM_LEN - 1):0]    id_ex_ctrl_sig_wb_from;
 
 // EX / MEM pipeline registers
 reg [4:0]             ex_mem_rd;
+reg [4:0]             ex_mem_rs1;
+reg [4:0]             ex_mem_rs2;
 reg [(`DWIDTH - 1):0] ex_mem_mem_data;
 reg [(`DWIDTH - 1):0] ex_mem_alu_out;
 
@@ -34,6 +38,8 @@ reg [(`WB_FROM_LEN - 1):0]    ex_mem_ctrl_sig_wb_from;
 
 // MEM / WB pipeline registers
 reg [4:0]             mem_wb_rd;
+reg [4:0]             mem_wb_rs1;
+reg [4:0]             mem_wb_rs2;
 reg [(`DWIDTH - 1):0] mem_wb_alu_out;
 reg [(`DWIDTH - 1):0] mem_wb_mem_data_out;
 reg [(`WB_FROM_LEN - 1):0]  mem_wb_ctrl_sig_wb_from;
@@ -41,6 +47,23 @@ reg [(`WB_FROM_LEN - 1):0]  mem_wb_ctrl_sig_wb_from;
 
 // instruction fetch stage
 reg [(`DWIDTH - 1):0] pc;
+
+
+wire [(`DWIDTH - 1):0]  pc_plus_4;
+assign pc_plus_4 = pc + 4;
+
+always @(posedge clk)
+// branch logic is described at the end of decode stage code
+begin
+  pc <= (do_branch) ? branch_pc : pc_plus_4;
+end
+
+always @(posedge clk)
+begin
+  if_id_pc <= pc;
+  if_id_inst <= aa; // TODO : instruction is from where?
+end
+  
 
 
 
@@ -81,6 +104,7 @@ wire [(`IMM_LEN - 1):0]         ctrl_sig_imm_type;
 wire [(`MEM_TYPE_LEN - 1):0]    ctrl_sig_mem_type;
 wire [(`MEM_WRITE_LEN - 1):0]   ctrl_sig_mem_write;
 wire [(`WB_FROM_LEN - 1):0]     ctrl_sig_wb_from;
+wire [3:0]                      ctrl_sig_br_type;
 
 control_unit control (
   .instruction (if_id_inst),
@@ -90,7 +114,8 @@ control_unit control (
   .writeback_from(ctrl_sig_wb_from),
   .imm_type(ctrl_sig_imm_type),
   .alu_src2(ctrl_sig_alu_src2),
-  .alu_src1(ctrl_sig_alu_src1)
+  .alu_src1(ctrl_sig_alu_src1),
+  .branch_type(ctrl_sig_br_type)
 );
 
 always @(posedge clk)
@@ -138,6 +163,29 @@ begin
 end
 
 
+// branch logic
+// TODO : data hazard has to be resolved for rs1 and rs2
+wire signed [(`DWIDTH - 1):0] signed_rs1_data;
+wire signed [(`DWIDTH - 1):0] signed_rs2_data;
+wire do_branch;
+wire [(`DWIDTH - 1):0] branch_oper2;    // immediate data
+wire [(`DWIDTH - 1):0] branch_oper1;    // pc or rs1(in case of jalr)
+wire [(`DWIDTH - 1):0] branch_pc;
+assign signed_rs1_data = rs1_data;
+assign signed_rs2_data = rs2_data;
+assign branch_oper2 = (ctrl_sig_br_type == BR_J) ?   (sign_ext_imm_uj << 1) :
+                      (ctrl_sig_br_type == BR_JR) ?  (sign_ext_imm_i << 1) : (sign_ext_imm_sb << 1);
+assign branch_oper1 = (ctrl_sig_br_type == BR_JR) ?  rs1_data : if_id_pc;   // TODO : have to resolve data hazard of rs1_data
+assign branch_pc    = branch_oper1 + branch_oper2;
+// TODO : an instruction right after the branch has to be dealt with
+assign do_branch    = (ctrl_sig_br_type == BR_EQ)   ? signed_rs1_data == signed_rs2_data :
+                      (ctrl_sig_br_type == BR_NE)   ? signed_rs1_data != signed_rs2_data :
+                      (ctrl_sig_br_type == BR_LT)   ? signed_rs1_data < signed_rs2_data  :
+                      (ctrl_sig_br_type == BR_GE)   ? signed_rs1_data >= signed_rs2_data :
+                      (ctrl_sig_br_type == BR_LTU)  ? rs1_data < rs2_data   :
+                      (ctrl_sig_br_type == BR_GEU)  ? rs1_data >= rs2_data  :
+                      (ctrl_sig_br_type == BR_J || ctrl_sig_br_type == BR_JR) ? 1'b1 : 1'b0;    // 1'b0 is for BR_X
+
 
 
 
@@ -148,7 +196,7 @@ assign alu_oper2 = (id_ex_ctrl_sig_alu_src2 == ALU2_RS2)  ? id_ex_rs2_data :
                    (id_ex_ctrl_sig_alu_src2 == ALU2_IMM)  ? id_ex_imm_data : 32{1'b0};
 
 assign alu_oper1 = (id_ex_ctrl_sig_alu_src1 == ALU1_RS1)  ? id_ex_rs1_data :
-                   (id_ex_ctrl_sig_alu_src1 == ALU1_PC)   ? id_ex_pc       :
+                   (id_ex_ctrl_sig_alu_src1 == ALU1_PC)   ? id_ex_pc       :            // TODO : do not use pc, just do pc + 4 at wb stage
                    (id_ex_ctrl_sig_alu_src1 == ALU1_ZERO) ? 32{1'b0}       : 32{1'b0};
 
 alu alu_operation (
@@ -176,15 +224,19 @@ end
 
 
 // ----- memory stage -----
-wire [1:0]  mem_write;
+wire mem_write, mem_ignore;
 wire [4:0]  mem_type;
 wire [11:0] mem_addr;
+wire
 wire [(`DWIDTH - 1):0] mem_data_in;
 wire [(`DWIDTH - 1):0] mem_data_out;
 wire [(`DWIDTH - 1):0] mem_data_out_ext;  // only for the load instruction
 assign mem_addr = ex_mem_alu_out;
 assign mem_data_in = ex_mem_data;
-assign mem_write = ex_mem_ctrl_sig_mem_write;
+// 0: write, 1: read
+assign mem_write = (ex_mem_ctrl_sig_mem_write == M_W) ? 1'b0 : 1'b1;
+// 0: memory opeation occurs, 1: does not occur
+assign mem_ignore = (ex_mem_ctrl_sig_mem_write == M_X) ? 1'b1 : 1'b0;
 assign mem_type = ex_mem_ctrl_mem_type;
 // only for the load instruction
 assign mem_data_out_ext = (mem_type == MT_HU) ? {(`DWIDTH - `HALF){1'b0}, mem_data_out[(`HALF - 1):0]} :
@@ -196,6 +248,7 @@ assign mem_data_out_ext = (mem_type == MT_HU) ? {(`DWIDTH - `HALF){1'b0}, mem_da
 // TODO : write back stage or memory stage?
 
 // memory module do not have sign-extended operation
+// negative triggered memory
 SP_SRAM data_memory (
   .WEN(mem_write),
   .DI(mem_data_in),
@@ -203,7 +256,7 @@ SP_SRAM data_memory (
   .BE(mem_type),
   .DOUT(mem_data_out),
   .CLK(),
-  .CSN()
+  .CSN(mem_ignore)
 );
 
 always @(posedge clk)

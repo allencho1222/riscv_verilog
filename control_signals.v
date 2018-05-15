@@ -12,6 +12,21 @@
 `define     M_W       2'b01
 `define     M_R       2'b10
 
+// register write signal
+`define     REG_X     1'b0
+`define     REG_W     1'b1
+
+// branch instruction type
+`define     BR_X      4'b0000
+`define     BR_J      3'b0001
+`define     BR_JR     3'b0010
+`define     BR_EQ     3'b0011
+`define     BR_NE     3'b0100
+`define     BR_LT     3'b0101
+`define     BR_GE     3'b0110
+`define     BR_LTU    3'b0111
+`define     BR_GEU    3'b1000
+
 // write back from signals
 `define     FROM_X    2'b00     // no write back occurs
 `define     FROM_ALU  2'b01
