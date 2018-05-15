@@ -2,6 +2,9 @@ module riscv_core();
 
 
 // pipeline registers
+// pc register
+reg [(`DWIDTH - 1):0] pc;
+
 
 // IF / ID pipeline registers
 reg [(`DWIDTH - 1):0] if_id_inst;
@@ -25,6 +28,7 @@ reg [(`MEM_WRITE_LEN - 1):0]  id_ex_ctrl_sig_mem_write;
 reg [(`WB_FROM_LEN - 1):0]    id_ex_ctrl_sig_wb_from;
 
 
+// TODO : rd propagation through pipeline registers
 // EX / MEM pipeline registers
 reg [4:0]             ex_mem_rd;
 reg [4:0]             ex_mem_rs1;
@@ -44,11 +48,7 @@ reg [(`DWIDTH - 1):0] mem_wb_alu_out;
 reg [(`DWIDTH - 1):0] mem_wb_mem_data_out;
 reg [(`WB_FROM_LEN - 1):0]  mem_wb_ctrl_sig_wb_from;
 
-
 // instruction fetch stage
-reg [(`DWIDTH - 1):0] pc;
-
-
 wire [(`DWIDTH - 1):0]  pc_plus_4;
 assign pc_plus_4 = pc + 4;
 
@@ -63,7 +63,6 @@ begin
   if_id_pc <= pc;
   if_id_inst <= aa; // TODO : instruction is from where?
 end
-  
 
 
 
@@ -186,16 +185,21 @@ assign do_branch    = (ctrl_sig_br_type == BR_EQ)   ? signed_rs1_data == signed_
                       (ctrl_sig_br_type == BR_GEU)  ? rs1_data >= rs2_data  :
                       (ctrl_sig_br_type == BR_J || ctrl_sig_br_type == BR_JR) ? 1'b1 : 1'b0;    // 1'b0 is for BR_X
 
+// hazard detection unit
 
 
 
 // ----- execution stage -----
 wire [(`DWIDTH - 1):0] alu_out, alu_op2, alu_op1;
+wire [(`DWIDTH - 1):0] alu_rs2_data, alu_rs1_data;    // bypassing will be considered
+wire [(`DWIDTH - 1):0] forward_from_exe_mem_rs2, forward_from_mem_wb_rs2
+wire [(`DWIDTH - 1):0] forward_from_exe_mem_rs1, forward_from_mem_wb_rs1
 
-assign alu_oper2 = (id_ex_ctrl_sig_alu_src2 == ALU2_RS2)  ? id_ex_rs2_data : 
+
+assign alu_oper2 = (id_ex_ctrl_sig_alu_src2 == ALU2_RS2)  ? alu_rs2_data   : 
                    (id_ex_ctrl_sig_alu_src2 == ALU2_IMM)  ? id_ex_imm_data : 32{1'b0};
 
-assign alu_oper1 = (id_ex_ctrl_sig_alu_src1 == ALU1_RS1)  ? id_ex_rs1_data :
+assign alu_oper1 = (id_ex_ctrl_sig_alu_src1 == ALU1_RS1)  ? alu_rs1_data   :
                    (id_ex_ctrl_sig_alu_src1 == ALU1_PC)   ? id_ex_pc       :            // TODO : do not use pc, just do pc + 4 at wb stage
                    (id_ex_ctrl_sig_alu_src1 == ALU1_ZERO) ? 32{1'b0}       : 32{1'b0};
 
@@ -219,6 +223,19 @@ begin
   ex_mem_ctrl_sig_mem_write <= id_ex_ctrl_sig_mem_write;
   ex_mem_ctrl_sig_wb_from <= id_ex_ctrl_sig_wb_from;
 end
+
+
+
+// bypassing logic
+assign forward_from_exe_mem_rs2 = ex_mem_ctrl_sig_reg_write == REG_W && ex_mem_rd != 5'b00000 && ex_mem_rd == id_ex_rs2;
+assign forward_from_mem_wb_rs2  = mem_wb_ctrl_sig_reg_write == REG_W && mem_wb_rd != 5'b00000 && mem_wb_rd == id_ex_rs2;
+assign forward_from_exe_mem_rs1 = ex_mem_ctrl_sig_reg_write == REG_W && ex_mem_rd != 5'b00000 && ex_mem_rd == id_ex_rs1;
+assign forward_from_mem_wb_rs1  = mem_wb_ctrl_sig_reg_write == REG_W && mem_wb_rd != 5'b00000 && mem_wb_rd == id_ex_rs1;
+// TODO : do we need !forward_from_exe_mem_rs? (because forward_from_exe_mem_rs2 is consider before it)
+assign alu_rs2_data = (forward_from_exe_mem_rs2) ? exe_mem_data :
+                      (forward_from_mem_wb_rs2 && !forward_from_exe_mem_rs2) ? reg_write_data : id_ex_rs2_data;
+assign alu_rs2_data = (forward_from_exe_mem_rs1) ? exe_mem_data :
+                      (forward_from_mem_wb_rs1 && !forward_from_exe_mem_rs1) ? reg_write_data : id_ex_rs1_data;
 
 
 
@@ -270,6 +287,7 @@ end
 
 
 // ----- write back stage -----
+// TODO : how about use reg_write_data mux before going to write-back stage
 wire [1:0]              wb_from;
 assign wb_from        = mem_wb_ctrl_sig_wb_from;
 assign reg_write_rd   = mem_wb_rd;
