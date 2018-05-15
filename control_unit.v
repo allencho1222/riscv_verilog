@@ -2,7 +2,7 @@ module control_unit (
   input [31:0] instruction,
   // generated control signals
   output reg [3:0] alu_op,
-  output reg [2:0] memory_type,
+  output reg [3:0] memory_type,
   output reg [1:0] memory_write,
   output reg [1:0] writeback_from,
   output reg [2:0] imm_type,
@@ -38,6 +38,24 @@ begin
     LW: begin
       alu_op = ALU_ADD;
       memory_type = MT_W;
+      memory_write = M_R;
+      writeback_from = FROM_MEM;
+      imm_type = IMM_I;
+      alu_src2 = ALU2_IMM;
+      alu_src1 = ALU1_RS1;
+    end
+    LBU: begin
+      alu_op = ALU_ADD;
+      memory_type = MT_BU;
+      memory_write = M_R;
+      writeback_from = FROM_MEM;
+      imm_type = IMM_I;
+      alu_src2 = ALU2_IMM;
+      alu_src1 = ALU1_RS1;
+    end
+    LHU: begin
+      alu_op = ALU_ADD;
+      memory_type = MT_HU;
       memory_write = M_R;
       writeback_from = FROM_MEM;
       imm_type = IMM_I;

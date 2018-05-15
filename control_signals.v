@@ -1,10 +1,11 @@
 // memory operation type
-`define     MT_X      3'b000    // no memory operation is required
-`define     MT_B      3'b001
-`define     MT_H      3'b010
-`define     MT_W      3'b011
-`define     MT_BU     3'b100
-`define     MT_HU     3'b101
+// fifth bit indicates whether it is U or not
+`define     MT_X      3'b00000  // no memory operation is required
+`define     MT_B      3'b00001
+`define     MT_H      3'b00011
+`define     MT_W      3'b01111
+`define     MT_BU     3'b10001
+`define     MT_HU     3'b10011
 
 // memory write signal
 `define     M_X       2'b00
