@@ -51,28 +51,26 @@ reg [(`DWIDTH - 1):0] mem_wb_mem_data_out;
 reg [(`WB_FROM_LEN - 1):0]  mem_wb_ctrl_sig_wb_from;
 reg                         mem_wb_ctrl_sig_reg_write;
 
-// instruction fetch stage
+
+// ---------- instruction fetch stage ----------
+
 wire [(`DWIDTH - 1):0]  pc_plus_4;
 assign pc_plus_4 = pc + 4;
 
-always @(posedge clk)
-// branch logic is described at the end of decode stage code
-begin
-  if (hazard_exist)
-    pc <= if_id_pc;
-  else
-    pc <= (do_branch) ? branch_pc : pc_plus_4;
-end
 
+// TODO: how to deal with 2 stall cycles?
 always @(posedge clk)
 begin
-  if (hazard_exist)
-    if_id_inst <= `BUBBLE;
+  if (load_use_stall || arith_br_stall) begin
+    if_id_inst  <= `BUBBLE;
+    pc          <= if_id_pc;
+  end
   else begin
-    if_id_inst <= aa; // TODO : instruction is from where?
-
-  if_id_pc <= pc;
+    if_id_inst  <=  // TODO: from instruction memory;
+    pc          <= (do_branch) ? branch_pc : pc_plus4;
+  end
 end
+    
 
 
 
@@ -179,7 +177,7 @@ wire load_br_stall;     // stall 2 cycles
 assign load_use_stall = (id_ex_ctrl_sig_mem_rw == M_R) &&   // check whether preceding is a load instruction
                         (id_ex_rd_addr == id_rs1_addr || ((id_ex_rd_addr == id_rs2_addr) && (ctrl_sig_mem_rw != M_W)));   // ctrl_sig_mem_rw != M_W is for load-store 
 assign arith_br_stall = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) &&   // check whether it is a branch instrucdtion
-                        (id_ex_ctrl_sig_reg_write == REG_W) && (id_ex_rd_addr != 5'b00000) && 
+                        (id_ex_ctrl_sig_reg_write == REG_W) && (id_ex_rd_addr != `REG_X0) && 
                         (id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
 assign load_br_stall  = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) && 
                         (id_ex_ctrl_sig_mem_rw == M_R) && 
@@ -191,16 +189,16 @@ wire id_from_exe_mem_rs2, id_from_mem_wb_rs2;
 wire id_from_exe_mem_rs1, id_from_mem_wb_rs1;
 wire [(`DWIDTH - 1):0] id_bypassed_rs1_data, id_bypassed_rs2_data;
 assign id_from_exe_mem_rs2 =  (ex_mem_ctrl_sig_reg_write == REG_W) && 
-                              (ex_mem_rd_addr != 5'b00000) && 
+                              (ex_mem_rd_addr != `REG_X0) && 
                               (ex_mem_rd_addr == id_rs2_addr);
 assign id_from_mem_wb_rs2  =  (mem_wb_ctrl_sig_reg_write == REG_W) && 
-                              (mem_wb_rd_addr != 5'b00000) && 
+                              (mem_wb_rd_addr != `REG_X0) && 
                               (mem_wb_rd_addr == id_rs2_addr);
 assign id_from_exe_mem_rs1 =  (ex_mem_ctrl_sig_reg_write == REG_W) && 
-                              (ex_mem_rd_addr != 5'b00000) && 
+                              (ex_mem_rd_addr != `REG_X0) && 
                               (ex_mem_rd_addr == id_rs1_addr);
 assign id_from_mem_wb_rs1  =  (mem_wb_ctrl_sig_reg_write == REG_W) && 
-                              (mem_wb_rd_addr != 5'b00000) && 
+                              (mem_wb_rd_addr != `REG_X0) && 
                               (mem_wb_rd_addr == id_rs1_addr);
 assign id_bypassed_rs2_data = (id_from_exe_mem_rs2) ? ex_mem_alu_out :
                               (id_from_mem_wb_rs2 && !id_from_exe_mem_rs2) ? reg_write_data : id_rs2_data;
@@ -211,28 +209,41 @@ assign id_bypassed_rs1_data = (id_from_exe_mem_rs1) ? ex_mem_alu_out :
 // pipeline register operation
 always @(posedge clk)
 begin
-  id_ex_pc <= pc;
-  id_ex_rd_addr   <= id_rd_addr;
-  id_ex_rs1_addr  <= id_rs1_addr;
-  id_ex_rs2_addr  <= id_rs2_addr;
-  id_ex_rs1_data  <= id_rs1_data;
-  id_ex_rs2_data  <= id_Rs2_data;
-  case (ctrl_sig_imm_type)
-    IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
-    IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
-    IMM_S:    id_ex_imm_data <= sign_ext_imm_s;
-    IMM_UJ:   id_ex_imm_data <= sign_ext_imm_uj;
-    IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
-    default:  id_ex_imm_data <= {32{1b'0}};      // IMM_X
-  endcase
-  id_ex_ctrl_sig_imm_type   <= ctrl_sig_imm_type;
-  id_ex_ctrl_sig_alu_fn     <= ctrl_sig_alu_fn;
-  id_ex_ctrl_sig_alu_src2   <= ctrl_sig_alu_src2;
-  id_ex_ctrl_sig_alu_src1   <= ctrl_sig_alu_src1;
-  id_ex_ctrl_sig_mem_type   <= ctrl_sig_mem_type;
-  id_ex_ctrl_sig_mem_rw     <= ctrl_sig_mem_rw;
-  id_ex_ctrl_sig_wb_from    <= ctrl_sig_wb_from;
-  id_ex_ctrl_sig_reg_write  <= ctrl_sig_reg_write;
+  if (!load_use_stall && !arith_br_stall && !load_br_stall) begin
+    id_ex_pc <= pc;
+    id_ex_rd_addr   <= id_rd_addr;
+    id_ex_rs1_addr  <= id_rs1_addr;
+    id_ex_rs2_addr  <= id_rs2_addr;
+    id_ex_rs1_data  <= id_rs1_data;
+    id_ex_rs2_data  <= id_Rs2_data;
+    case (ctrl_sig_imm_type)
+      IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
+      IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
+      IMM_S:    id_ex_imm_data <= sign_ext_imm_s;
+      IMM_UJ:   id_ex_imm_data <= sign_ext_imm_uj;
+      IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
+      default:  id_ex_imm_data <= {32{1b'0}};      // IMM_X
+    endcase
+    id_ex_ctrl_sig_imm_type   <= ctrl_sig_imm_type;
+    id_ex_ctrl_sig_alu_fn     <= ctrl_sig_alu_fn;
+    id_ex_ctrl_sig_alu_src2   <= ctrl_sig_alu_src2;
+    id_ex_ctrl_sig_alu_src1   <= ctrl_sig_alu_src1;
+    id_ex_ctrl_sig_mem_type   <= ctrl_sig_mem_type;
+    id_ex_ctrl_sig_mem_rw     <= ctrl_sig_mem_rw;
+    id_ex_ctrl_sig_wb_from    <= ctrl_sig_wb_from;
+    id_ex_ctrl_sig_reg_write  <= ctrl_sig_reg_write;
+  end
+  else if (load_use_stall || arith_br_stall) begin
+    id_ex_ctrl_sig_alu_fn     <= ALU_X;
+    id_ex_ctrl_sig_alu_src2   <= ALU2_X;
+    id_ex_ctrl_sig_alu_src1   <= ALU1_X;
+    id_ex_ctrl_sig_mem_type   <= MT_X;
+    id_ex_ctrl_sig_mem_rw     <= M_X;
+    id_ex_ctrl_sig_wb_from    <= FROM_X;
+    id_ex_ctrl_sig_reg_write  <= REG_X;
+  end
+  // TODO : how to deal with 2 stall cycles?
+  else if (load_br_stall)
 end
   
 
@@ -262,16 +273,16 @@ alu alu_operation (
 
 // bypassing logic for ALU
 assign ex_from_exe_mem_rs2 =  (ex_mem_ctrl_sig_reg_write == REG_W) && 
-                              (ex_mem_rd_addr != 5'b00000) && 
+                              (ex_mem_rd_addr != `REG_X0) && 
                               (ex_mem_rd_addr == id_ex_rs2_addr);
 assign ex_from_mem_wb_rs2  =  (mem_wb_ctrl_sig_reg_write == REG_W) && 
-                              (mem_wb_rd_addr != 5'b00000) && 
+                              (mem_wb_rd_addr != `REG_X0) && 
                               (mem_wb_rd_addr == id_ex_rs2_addr);
 assign ex_from_exe_mem_rs1 =  (ex_mem_ctrl_sig_reg_write == REG_W) && 
-                              (ex_mem_rd_addr != 5'b00000) && 
+                              (ex_mem_rd_addr != `REG_X0) && 
                               (ex_mem_rd_addr == id_ex_rs1_addr);
 assign ex_from_mem_wb_rs1  =  (mem_wb_ctrl_sig_reg_write == REG_W) && 
-                              (mem_wb_rd_addr != 5'b00000) && 
+                              (mem_wb_rd_addr != `REG_X0) && 
                               (mem_wb_rd_addr == id_ex_rs1_addr);
 // TODO : do we need !forward_from_exe_mem_rs? (because forward_from_exe_mem_rs2 is considered before it)
 assign ex_bypassed_rs2_data = (ex_from_exe_mem_rs2) ? ex_mem_alu_out :

@@ -1,6 +1,7 @@
 `define   DWIDTH        32
 `define	  IWIDTH	32
 
+`define   REG_X0        5'b00000
 
 `define   BYTE          (`DWIDTH/4)
 `define   HALF          (`DWIDTH/2)
