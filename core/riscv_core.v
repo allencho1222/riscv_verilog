@@ -11,6 +11,7 @@ reg [(`IWIDTH - 1):0] if_id_inst;
 reg [(`DWIDTH - 1):0] if_id_pc;
 
 // ID / EX pipeline registers
+reg [(`DWIDTH - 1):0] id_ex_pc;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rd_addr;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rs1_addr;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rs2_addr;
@@ -29,6 +30,8 @@ reg [(`WB_FROM_LEN - 1):0]    id_ex_ctrl_sig_wb_from;
 
 reg                           id_ex_ctrl_sig_reg_write;
 
+reg                           id_ex_load_br_stall;
+
 
 // EX / MEM pipeline registers
 reg [(`REG_ADDR_LEN - 1):0] ex_mem_rd_addr;
@@ -41,6 +44,7 @@ reg [(`MEM_WRITE_LEN - 1):0]  ex_mem_ctrl_sig_mem_rw;
 reg [(`WB_FROM_LEN - 1):0]    ex_mem_ctrl_sig_wb_from;
 
 reg                           ex_mem_ctrl_sig_reg_write;
+reg                           ex_mem_load_br_stall;
 
 // MEM / WB pipeline registers
 reg [(`REG_ADDR_LEN - 1):0] mem_wb_rd_addr;
@@ -61,13 +65,23 @@ assign pc_plus_4 = pc + 4;
 // TODO: how to deal with 2 stall cycles?
 always @(posedge clk)
 begin
-  if (load_use_stall || arith_br_stall) begin
+  if_id_pc <= pc;
+  if (load_use_stall || arith_br_stall || ex_mem_load_br_stall) begin
     if_id_inst  <= `BUBBLE;
-    pc          <= if_id_pc;
+    if (ex_mem_load_br_stall) // 2 cycle stall
+      pc <= id_ex_pc;
+    else
+      pc <= if_id_pc;
   end
   else begin
-    if_id_inst  <=  // TODO: from instruction memory;
-    pc          <= (do_branch) ? branch_pc : pc_plus4;
+    if (id_do_branch) begin // when branch occurs, do flushing
+      if_id_inst  <= `BUBBLE;
+      pc          <= branch_pc;
+    end
+    else begin
+      if_id_inst  <=  // TODO: from instruction memory;
+      pc          <= pc_plus4;
+    end
   end
 end
     
@@ -209,8 +223,18 @@ assign id_bypassed_rs1_data = (id_from_exe_mem_rs1) ? ex_mem_alu_out :
 // pipeline register operation
 always @(posedge clk)
 begin
+  id_ex_pc <= if_id_pc;
+  id_ex_load_br_stall <= load_br_stall;
+  if (ex_mem_load_br_stall) begin // 2 cycle stall
+    id_ex_ctrl_sig_alu_fn     <= ALU_X;
+    id_ex_ctrl_sig_alu_src2   <= ALU2_X;
+    id_ex_ctrl_sig_alu_src1   <= ALU1_X;
+    id_ex_ctrl_sig_mem_type   <= MT_X;
+    id_ex_ctrl_sig_mem_rw     <= M_X;
+    id_ex_ctrl_sig_wb_from    <= FROM_X;
+    id_ex_ctrl_sig_reg_write  <= REG_X;
+  end
   if (!load_use_stall && !arith_br_stall && !load_br_stall) begin
-    id_ex_pc <= pc;
     id_ex_rd_addr   <= id_rd_addr;
     id_ex_rs1_addr  <= id_rs1_addr;
     id_ex_rs2_addr  <= id_rs2_addr;
@@ -233,7 +257,7 @@ begin
     id_ex_ctrl_sig_wb_from    <= ctrl_sig_wb_from;
     id_ex_ctrl_sig_reg_write  <= ctrl_sig_reg_write;
   end
-  else if (load_use_stall || arith_br_stall) begin
+  else  begin
     id_ex_ctrl_sig_alu_fn     <= ALU_X;
     id_ex_ctrl_sig_alu_src2   <= ALU2_X;
     id_ex_ctrl_sig_alu_src1   <= ALU1_X;
@@ -242,8 +266,6 @@ begin
     id_ex_ctrl_sig_wb_from    <= FROM_X;
     id_ex_ctrl_sig_reg_write  <= REG_X;
   end
-  // TODO : how to deal with 2 stall cycles?
-  else if (load_br_stall)
 end
   
 
@@ -303,6 +325,7 @@ begin
   ex_mem_ctrl_sig_mem_rw    <= id_ex_ctrl_sig_mem_rw;
   ex_mem_ctrl_sig_wb_from   <= id_ex_ctrl_sig_wb_from;
   ex_mem_ctrl_sig_reg_write <= id_ex_ctrl_sig_reg_write;
+  ex_mem_load_br_stall      <= id_ex_load_br_stall;
 end
 
 
