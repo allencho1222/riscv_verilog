@@ -31,7 +31,7 @@ begin
     ALU_SNE:  alu_out = oper1 != oper2;
     ALU_SL:   alu_out = oper1 << shamt;
     ALU_SR:   alu_out = oper1 >> shamt;
-    ALU_SRA:  alu_out = src_opt >>> shamt;
+    ALU_SRA:  alu_out = oper1 >>> shamt;
     default:  alu_out = oper1 + oper2;
 end
 

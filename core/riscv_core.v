@@ -295,7 +295,7 @@ begin
 end
 
 
-// ----- memory stage -----
+// ---------- memory stage ----------
 wire mem_is_load_store;
 wire mem_write, mem_ignore;
 wire [(`MEM_TYPE_LEN - 1):0]  mem_type;
@@ -307,7 +307,7 @@ assign mem_addr           = ex_mem_alu_out;
 assign mem_write          = (ex_mem_ctrl_sig_mem_rw == M_W) ? 1'b0 : 1'b1; // 0: write, 1: read
 assign mem_ignore         = (ex_mem_ctrl_sig_mem_rw == M_X) ? 1'b1 : 1'b0;    // 0: memory opeation occurs, 1: does not occur
 assign mem_type           = ex_mem_ctrl_mem_type;
-// TODO: I'm not sure load-store dependence is correctly handled.
+// TODO: I'm not sure load-store dependence is correctly handled. (bypassing logic)
 assign mem_is_load_store  = (mem_write == 1'b0 && (mem_wb_rd_addr == ex_mem_rs2_addr));
 assign mem_data_in        = (mem_is_load_store) ? mem_wb_alu_out : ex_mem_mem_data;
 // only for the load instruction
@@ -331,6 +331,8 @@ SP_SRAM data_memory (
   .CSN(mem_mem_ignore)
 );
 
+
+// pipeline register operation
 always @(posedge clk)
 begin
   //mem_wb_rs1_addr <= ex_mem_rs1_addr;
@@ -344,7 +346,7 @@ end
 
 
 
-// ----- write back stage -----
+// ---------- write back stage ----------
 // TODO : how about using reg_write_data mux before going to write-back stage (assign this in memory stage)
 assign reg_write_addr = mem_wb_rd_addr;
 assign reg_write_data = (mem_wb_ctrl_sig_wb_from == FROM_ALU) ? mem_wb_alu_out :
