@@ -18,14 +18,14 @@
 
 // branch instruction type
 `define     BR_X      4'b0000
-`define     BR_J      3'b0001
-`define     BR_JR     3'b0010
-`define     BR_EQ     3'b0011
-`define     BR_NE     3'b0100
-`define     BR_LT     3'b0101
-`define     BR_GE     3'b0110
-`define     BR_LTU    3'b0111
-`define     BR_GEU    3'b1000
+`define     BR_J      4'b0001
+`define     BR_JR     4'b0010
+`define     BR_EQ     4'b0011
+`define     BR_NE     4'b0100
+`define     BR_LT     4'b0101
+`define     BR_GE     4'b0110
+`define     BR_LTU    4'b0111
+`define     BR_GEU    4'b1000
 
 // write back from signals
 `define     FROM_X    2'b00     // no write back occurs
@@ -39,16 +39,12 @@
 `define     ALU_SUB   4'b0010
 `define     ALU_SLT   4'b0011
 `define     ALU_SLTU  4'b0100
-`define     ALU_SGE   4'b0101
-`define     ALU_SGEU  4'b0110
-`define     ALU_AND   4'b0110
+`define     ALU_AND   4'b0101
 `define     ALU_OR    4'b0110
 `define     ALU_XOR   4'b0111
-`define     ALU_SEQ   4'b1000
-`define     ALU_SNE   4'b1001
-`define     ALU_SL    4'b1010
-`define     ALU_SR    4'b1011
-`define     ALU_SRA   4'b1100
+`define     ALU_SL    4'b1000
+`define     ALU_SR    4'b1001
+`define     ALU_SRA   4'b1010
 
 // immediate type signals
 `define     IMM_X     3'b000    // no immeidate operation is required(R type)
@@ -59,13 +55,13 @@
 `define     IMM_UJ    3'b101
 
 // ALU source2 signals   
-`define     ALU2_X    3'b000    // no source is required
-`define     ALU2_RS2  3'b001     
-`define     ALU2_IMM  3'b010     
+`define     ALU2_X    3'b00     // no source is required
+`define     ALU2_RS2  3'b01     
+`define     ALU2_IMM  3'b10     
 
 // ALU source1 signals
-`define     ALU1_X    3'b000    // no source is required
-`define     ALU1_RS1  3'b001
-`define     ALU1_PC   3'b010
-`define     ALU1_ZERO 3'b011
+`define     ALU1_X    3'b00     // no source is required
+`define     ALU1_RS1  3'b01
+`define     ALU1_PC   3'b10
+`define     ALU1_ZERO 3'b11
 

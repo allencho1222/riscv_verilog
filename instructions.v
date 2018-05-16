@@ -22,67 +22,69 @@
 // 31 30 29 28 27 26 25 24 23 22 21 20 19 18 17 16 15 14 13 12 11 10  9  8  7  6  5  4  3  2  1  0
 //                                    imm[20][10:1][11][19:12]             rd               opcode
 
+// no operation
+`define     BUBBLE  32'b00000000000000000000000000000000000
 
 // load instructions    --- I-type
-`define     LB      32b'xxxxxxxxxxx_xxxxx_000_xxxxx_0000011
-`define     LH      32b'xxxxxxxxxxx_xxxxx_001_xxxxx_0000011
-`define     LW      32b'xxxxxxxxxxx_xxxxx_010_xxxxx_0000011
-`define     LBU     32b'xxxxxxxxxxx_xxxxx_100_xxxxx_0000011
-`define     LHU     32b'xxxxxxxxxxx_xxxxx_101_xxxxx_0000011
+`define     LB      32'bxxxxxxxxxxx_xxxxx_000_xxxxx_0000011
+`define     LH      32'bxxxxxxxxxxx_xxxxx_001_xxxxx_0000011
+`define     LW      32'bxxxxxxxxxxx_xxxxx_010_xxxxx_0000011
+`define     LBU     32'bxxxxxxxxxxx_xxxxx_100_xxxxx_0000011
+`define     LHU     32'bxxxxxxxxxxx_xxxxx_101_xxxxx_0000011
 
 // store instructions   --- S-type
-`define     SB      32b'xxxxxxx_xxxxx_xxxxx_000_xxxxx_0100011
-`define     SH      32b'xxxxxxx_xxxxx_xxxxx_001_xxxxx_0100011
-`define     SW      32b'xxxxxxx_xxxxx_xxxxx_010_xxxxx_0100011
+`define     SB      32'bxxxxxxx_xxxxx_xxxxx_000_xxxxx_0100011
+`define     SH      32'bxxxxxxx_xxxxx_xxxxx_001_xxxxx_0100011
+`define     SW      32'bxxxxxxx_xxxxx_xxxxx_010_xxxxx_0100011
 
 // shift instructions
 // SLL, SRL, SRA     --- R-type
 // SLLI, SRLI, SRAI  --- I-type
-`define     SLL     32b'0000000_xxxxx_xxxxx_001_xxxxx_0110011
-`define     SLLI    32b'0000000_xxxxx_xxxxx_001_xxxxx_0010011
-`define     SRL     32b'0000000_xxxxx_xxxxx_101_xxxxx_0110011
-`define     SRLI    32b'0000000_xxxxx_xxxxx_101_xxxxx_0010011
-`define     SRA     32b'0100000_xxxxx_xxxxx_101_xxxxx_0110011
-`define     SRAI    32b'0100000_xxxxx_xxxxx_101_xxxxx_0010011
+`define     SLL     32'b0000000_xxxxx_xxxxx_001_xxxxx_0110011
+`define     SLLI    32'b0000000_xxxxx_xxxxx_001_xxxxx_0010011
+`define     SRL     32'b0000000_xxxxx_xxxxx_101_xxxxx_0110011
+`define     SRLI    32'b0000000_xxxxx_xxxxx_101_xxxxx_0010011
+`define     SRA     32'b0100000_xxxxx_xxxxx_101_xxxxx_0110011
+`define     SRAI    32'b0100000_xxxxx_xxxxx_101_xxxxx_0010011
 
 // arithmetic instructions
 // ADD, SUB          --- R-type
 // ADDI              --- I-type
 // LUI, AUPIC        --- U-type
-`define     ADD     32b'0000000_xxxxx_xxxxx_000_xxxxx_0110011
-`define     ADDI    32b'xxxxxxxxxxxx_xxxxx_000_xxxxx_0010011
-`define     SUB     32b'0100000_xxxxx_xxxxx_000_xxxxx_0110011
-`define     LUI     32b'xxxxxxxxxxxxxxxxxxxx_xxxxx_0110111
-`define     AUIPC   32b'xxxxxxxxxxxxxxxxxxxx_xxxxx_0010111
+`define     ADD     32'b0000000_xxxxx_xxxxx_000_xxxxx_0110011
+`define     ADDI    32'bxxxxxxxxxxxx_xxxxx_000_xxxxx_0010011
+`define     SUB     32'b0100000_xxxxx_xxxxx_000_xxxxx_0110011
+`define     LUI     32'bxxxxxxxxxxxxxxxxxxxx_xxxxx_0110111
+`define     AUIPC   32'bxxxxxxxxxxxxxxxxxxxx_xxxxx_0010111
 
 // logical instructions
 // XOR, OR, AND      --- R-type
 // XORI, ORI, ANDI   --- I-type
-`define     XOR     32b'0000000_xxxxx_xxxxx_100_xxxxx_0110011
-`define     XORI    32b'xxxxxxxxxxxx_xxxxx_100_xxxxx_0010011
-`define     OR      32b'0000000_xxxxx_xxxxx_110_xxxxx_0110011
-`define     ORI     32b'xxxxxxxxxxxx_xxxxx_110_xxxxx_0010011
-`define     AND     32b'0000000_xxxxx_xxxxx_111_xxxxx_0110011
-`define     ANDI    32b'xxxxxxxxxxxx_xxxxx_111_xxxxx_0010011
+`define     XOR     32'b0000000_xxxxx_xxxxx_100_xxxxx_0110011
+`define     XORI    32'bxxxxxxxxxxxx_xxxxx_100_xxxxx_0010011
+`define     OR      32'b0000000_xxxxx_xxxxx_110_xxxxx_0110011
+`define     ORI     32'bxxxxxxxxxxxx_xxxxx_110_xxxxx_0010011
+`define     AND     32'b0000000_xxxxx_xxxxx_111_xxxxx_0110011
+`define     ANDI    32'bxxxxxxxxxxxx_xxxxx_111_xxxxx_0010011
 
 // compare instructions
 // SLT, SLTU         --- R-type
 // SLTI, SLTIU       --- I-type
-`define     SLT     32b'0000000_xxxxx_xxxxx_010_xxxxx_0110011
-`define     SLTI    32b'xxxxxxxxxxxx_xxxxx_010_xxxxx_0010011
-`define     SLTU    32b'0000000_xxxxx_xxxxx_011_xxxxx_0110011
-`define     SLTIU   32b'xxxxxxxxxxxx_xxxxx_011_xxxxx_0010011
+`define     SLT     32'b0000000_xxxxx_xxxxx_010_xxxxx_0110011
+`define     SLTI    32'bxxxxxxxxxxxx_xxxxx_010_xxxxx_0010011
+`define     SLTU    32'b0000000_xxxxx_xxxxx_011_xxxxx_0110011
+`define     SLTIU   32'bxxxxxxxxxxxx_xxxxx_011_xxxxx_0010011
 
 // branch instructions   --- SB-type
-`define     BEQ     32b'x_xxxxxx_xxxxx_xxxxx_000_xxxx_x_1100011
-`define     BNE     32b'x_xxxxxx_xxxxx_xxxxx_001_xxxx_x_1100011
-`define     BLT     32b'x_xxxxxx_xxxxx_xxxxx_100_xxxx_x_1100011
-`define     BGE     32b'x_xxxxxx_xxxxx_xxxxx_101_xxxx_x_1100011
-`define     BLTU    32b'x_xxxxxx_xxxxx_xxxxx_110_xxxx_x_1100011
-`define     BGEU    32b'x_xxxxxx_xxxxx_xxxxx_111_xxxx_x_1100011
+`define     BEQ     32'bx_xxxxxx_xxxxx_xxxxx_000_xxxx_x_1100011
+`define     BNE     32'bx_xxxxxx_xxxxx_xxxxx_001_xxxx_x_1100011
+`define     BLT     32'bx_xxxxxx_xxxxx_xxxxx_100_xxxx_x_1100011
+`define     BGE     32'bx_xxxxxx_xxxxx_xxxxx_101_xxxx_x_1100011
+`define     BLTU    32'bx_xxxxxx_xxxxx_xxxxx_110_xxxx_x_1100011
+`define     BGEU    32'bx_xxxxxx_xxxxx_xxxxx_111_xxxx_x_1100011
 
 // jump and link instructions
 // JAL               --- UJ-type
 // JALR              --- I-type
-`define     JAL     32b'x_xxxxxxxxxx_x_xxxxxxxx_xxxxx_1101111
-`define     JALR    32b'xxxxxxxxxxxx_xxxxx_000_xxxxx_1100111
+`define     JAL     32'bx_xxxxxxxxxx_x_xxxxxxxx_xxxxx_1101111
+`define     JALR    32'bxxxxxxxxxxxx_xxxxx_000_xxxxx_1100111

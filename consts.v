@@ -1,4 +1,6 @@
 `define   DWIDTH        32
+`define	  IWIDTH	32
+
 
 `define   BYTE          (`DWIDTH/4)
 `define   HALF          (`DWIDTH/2)
@@ -17,9 +19,14 @@
 `define   IMM_U_WIDTH   20
 `define   IMM_UJ_WIDTH  20
 
-`define   ALU_OP_LEN    4
-`define   IMM_LEN       3
-`define   ALU_SRC_LEN   3
+
 `define   MEM_TYPE_LEN  5
 `define   MEM_WRITE_LEN 2 
+`define	  REG_WRITE_LEN	1
+`define	  BR_TYPE_LEN	4
 `define   WB_FROM_LEN   2
+`define   ALU_FN_LEN    4
+`define   IMM_TYPE_LEN  3
+`define   ALU_SRC_LEN   2
+
+`define	  REG_ADDR_LEN	5
