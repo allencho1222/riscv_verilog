@@ -1,5 +1,28 @@
-module riscv_core();
-
+module riscv_core(
+  // general signals
+  input CLK,
+  input RSTn,
+  // Instruction memory signals
+  output I_MEM_CSN,                     // no instruction memory operation
+  input [(`DWIDTH - 1):0] I_MEM_DI,     // core will receive instruction from this wire
+  output [(`DWIDTH - 1):0] I_MEM_ADDR,  // core will send address of an instruction(pc)
+  // Data memory signals
+  output D_MEM_CSN,                     // no data memory operation
+  input [(`DWIDTH - 1):0] D_MEM_DI,     // core will receive data from this wire
+  output [(`DWIDTH - 1):0] D_MEM_DOUT,  // core will send data to be written
+  output [(`DWIDTH - 1);0] D_MEM_ADDR,  // core will send address of data memory
+  output D_MEM_WEN,                     // core will send the write enable signal
+  output D_MEM_BE,                      // core will send memory type (BYTE, HALF, or WORD)
+  // Register file signals
+  output RF_WE,                           // core will send write enable signal of register file
+  output [(`REG_ADDR_LEN - 1):0] RF_RA1,  // core will send address of register1
+  output [(`REG_ADDR_LEN - 1):0] RF_RA2,  // core will send address of register2
+  output [(`REG_ADDR_LEN - 1):0] RF_WA,   // core will send address of destination register
+  input [(`DWIDTH - 1):0] RF_RD1,       // core will receive rs1 data
+  input [(`DWIDTH - 1):0] RF_RD2,       // core will receive rs2 data
+  output [(`DWIDTH - 1):0] RF_WD,       // core will send data to be written
+  //input DE_OP_EN
+);
 
 // ---------- pipeline registers ----------
 // pc register
@@ -63,10 +86,10 @@ assign pc_plus_4 = pc + 4;
 
 
 // TODO: how to deal with 2 stall cycles?
-always @(posedge clk)
+always @(posedge CLK)
 begin
   if_id_pc <= pc;
-  if (load_use_stall || arith_br_stall || ex_mem_load_br_stall) begin
+  if (load_use_stall /*|| arith_br_stall*/ || ex_mem_load_br_stall) begin
     if_id_inst  <= `BUBBLE;
     if (ex_mem_load_br_stall) // 2 cycle stall
       pc <= id_ex_pc;
@@ -79,12 +102,16 @@ begin
       pc          <= branch_pc;
     end
     else begin
-      if_id_inst  <=  // TODO: from instruction memory;
+      if_id_inst  <= I_MEM_DI;// TODO: from instruction memory;
       pc          <= pc_plus4;
     end
   end
 end
-    
+
+// interface between core and instruction memory
+assign I_MEM_ADDR = pc;
+assign I_MEM_CSN = 1'b0;
+
 
 
 
@@ -96,20 +123,16 @@ assign id_rs1_addr  = if_id_inst[RS1_START:RS1_END];
 assign id_rs2_addr  = if_id_inst[RS2_START:RS2_END];
 assign id_rd_addr   = if_id_inst[RD_START:RD_END];
 
-wire [(`DWIDTH - 1):0] id_rs1_data, id_rs2_data;
+//wire [(`DWIDTH - 1):0] id_rs1_data, id_rs2_data;
 wire [(`DWIDTH - 1):0] reg_write_data;      // it will be assigned at write back stage
 
-REG_FILE register_file (
-  .CLK(),
-  .WE(mem_wb_ctrl_sig_reg_write),
-  .RST(),
-  .RA1(id_rs1_addr),
-  .RA2(id_rs2_addr),
-  .WA(reg_write_addr),
-  .WD(reg_write_data),
-  .RD1(id_rs1_data),
-  .RD2(id_rs2_data)
-);
+
+// interface bewteen core and register file
+assign RF_WE  = mem_wb_ctrl_sig_reg_write;
+assign RF_RA1 = id_rs1_addr;
+assign RF_RA2 = id_rs2_addr;
+assign RF_WA  = reg_write_addr;
+assign RF_WD  = reg_write_data;
 
 
 // control unit
@@ -186,13 +209,13 @@ assign id_do_branch    =  (ctrl_sig_br_type == BR_EQ)   ? id_signed_rs1_data == 
 // TODO : can we bypass data in case of arith_br_stall?
 wire load_use_stall;    // stall 1 cycle
 // except JAL instruction. It does not use rs1 or rs2
-wire arith_br_stall;    // e.g.,) branch right after ADD, stall 1 cycle
+//wire arith_br_stall;    // e.g.,) branch right after ADD, stall 1 cycle
 wire load_br_stall;     // stall 2 cycles
 assign load_use_stall = (id_ex_ctrl_sig_mem_rw == M_R) &&   // check whether preceding is a load instruction
                         (id_ex_rd_addr == id_rs1_addr || ((id_ex_rd_addr == id_rs2_addr) && (ctrl_sig_mem_rw != M_W)));   // ctrl_sig_mem_rw != M_W is for load-store 
-assign arith_br_stall = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) &&   // check whether it is a branch instrucdtion
-                        (id_ex_ctrl_sig_reg_write == REG_W) && (id_ex_rd_addr != `REG_X0) && 
-                        (id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
+//assign arith_br_stall = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) &&   // check whether it is a branch instrucdtion
+                        //(id_ex_ctrl_sig_reg_write == REG_W) && (id_ex_rd_addr != `REG_X0) && 
+                        //(id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
 assign load_br_stall  = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) && 
                         (id_ex_ctrl_sig_mem_rw == M_R) && 
                         (id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
@@ -201,6 +224,7 @@ assign load_br_stall  = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) &
 // bypassing logic for branch unit
 wire id_from_exe_mem_rs2, id_from_mem_wb_rs2;
 wire id_from_exe_mem_rs1, id_from_mem_wb_rs1;
+wire id_from_exe_alu_out_rs1, id_from_exe_alu_out_rs2; // for arith-br
 wire [(`DWIDTH - 1):0] id_bypassed_rs1_data, id_bypassed_rs2_data;
 assign id_from_exe_mem_rs2 =  (ex_mem_ctrl_sig_reg_write == REG_W) && 
                               (ex_mem_rd_addr != `REG_X0) && 
@@ -214,14 +238,22 @@ assign id_from_exe_mem_rs1 =  (ex_mem_ctrl_sig_reg_write == REG_W) &&
 assign id_from_mem_wb_rs1  =  (mem_wb_ctrl_sig_reg_write == REG_W) && 
                               (mem_wb_rd_addr != `REG_X0) && 
                               (mem_wb_rd_addr == id_rs1_addr);
-assign id_bypassed_rs2_data = (id_from_exe_mem_rs2) ? ex_mem_alu_out :
-                              (id_from_mem_wb_rs2 && !id_from_exe_mem_rs2) ? reg_write_data : id_rs2_data;
-assign id_bypassed_rs1_data = (id_from_exe_mem_rs1) ? ex_mem_alu_out :
-                              (id_from_mem_wb_rs1 && !id_from_exe_mem_rs1) ? reg_write_data : id_rs1_data;
+assign id_from_exe_alu_out_rs1 =  (id_ex_ctrl_sig_reg_write == REG_W) &&
+                                  (id_ex_rd_addr != `REG_X0) &&
+                                  (id_ex_rd_addr == id_rs1_addr);
+assign id_from_exe_alu_out_rs2 =  (id_ex_ctrl_sig_reg_write == REG_W) &&
+                                  (id_ex_rd_addr != `REG_X0) &&
+                                  (id_ex_rd_addr == id_rs2_addr);
+assign id_bypassed_rs2_data = (id_from_exe_alu_out_rs2) ? ex_alu_out :
+                              (id_from_exe_mem_rs2) ?     ex_mem_alu_out :
+                              (id_from_mem_wb_rs2 && !id_from_exe_mem_rs2) ? reg_write_data : RF_RD2;
+assign id_bypassed_rs1_data = (id_from_exe_alu_out_rs1) ? ex_alu_out :
+                              (id_from_exe_mem_rs1) ?     ex_mem_alu_out :
+                              (id_from_mem_wb_rs1 && !id_from_exe_mem_rs1) ? reg_write_data : RF_RD1;
 
 
 // pipeline register operation
-always @(posedge clk)
+always @(posedge CLK)
 begin
   id_ex_pc <= if_id_pc;
   id_ex_load_br_stall <= load_br_stall;
@@ -234,7 +266,7 @@ begin
     id_ex_ctrl_sig_wb_from    <= FROM_X;
     id_ex_ctrl_sig_reg_write  <= REG_X;
   end
-  if (!load_use_stall && !arith_br_stall && !load_br_stall) begin
+  if (!load_use_stall /*&& !arith_br_stall*/ && !load_br_stall) begin
     id_ex_rd_addr   <= id_rd_addr;
     id_ex_rs1_addr  <= id_rs1_addr;
     id_ex_rs2_addr  <= id_rs2_addr;
@@ -314,7 +346,7 @@ assign ex_bypassed_rs1_data = (ex_from_exe_mem_rs1) ? ex_mem_alu_out :
 
 
 // pipeline register operation
-always @(posedge clk)
+always @(posedge CLK)
 begin
   //ex_mem_rs1_addr <= id_ex_rs1_addr;
   ex_mem_rs2_addr <= id_ex_rs2_addr;          // for load-store
@@ -335,7 +367,7 @@ wire mem_write, mem_ignore;
 wire [(`MEM_TYPE_LEN - 1):0]  mem_type;
 wire [(`DWIDTH - 1):0] mem_addr;
 wire [(`DWIDTH - 1):0] mem_data_in;
-wire [(`DWIDTH - 1):0] mem_data_out;
+//wire [(`DWIDTH - 1):0] mem_data_out;
 wire [(`DWIDTH - 1):0] mem_data_out_ext;  // only for the load instruction
 assign mem_addr           = ex_mem_alu_out;
 assign mem_write          = (ex_mem_ctrl_sig_mem_rw == M_W) ? 1'b0 : 1'b1; // 0: write, 1: read
@@ -345,29 +377,24 @@ assign mem_type           = ex_mem_ctrl_mem_type;
 assign mem_is_load_store  = (mem_write == 1'b0 && (mem_wb_rd_addr == ex_mem_rs2_addr));
 assign mem_data_in        = (mem_is_load_store) ? mem_wb_alu_out : ex_mem_mem_data;
 // only for the load instruction
-assign mem_data_out_ext   = (mem_type == MT_HU) ? {(`DWIDTH - `HALF){1'b0}, mem_data_out[(`HALF - 1):0]} :
-                            (mem_type == MT_BU) ? {(`DWIDTH - `BYTE){1'b0}, mem_data_out[(`BYTE - 1):0]} :
-                            (mem_type == MT_H)  ? {(`DWIDTH - `HALF){mem_data_out[`HALF - 1]}, mem_data_out[(`HALF - 1):0]} :
-                            (mem_type == MT_B)  ? {(`DWIDTH - `BYTE){mem_data_out[`BYTE - 1]}, mem_data_out[(`BYTE - 1):0]} :
+assign mem_data_out_ext   = (mem_type == MT_HU) ? {(`DWIDTH - `HALF){1'b0}, D_MEM_DI[(`HALF - 1):0]} :
+                            (mem_type == MT_BU) ? {(`DWIDTH - `BYTE){1'b0}, D_MEM_DI[(`BYTE - 1):0]} :
+                            (mem_type == MT_H)  ? {(`DWIDTH - `HALF){D_MEM_DI[`HALF - 1]}, D_MEM_DI[(`HALF - 1):0]} :
+                            (mem_type == MT_B)  ? {(`DWIDTH - `BYTE){D_MEM_DI[`BYTE - 1]}, D_MEM_DI[(`BYTE - 1):0]} :
                                                   32{1'b0};
 // TODO : where to put multiplexr which is used for data selection between memory out and alu out
 // TODO : write back stage or memory stage?
 
-// memory module do not have sign-extended operation
-// negative triggered memory
-SP_SRAM data_memory (
-  .WEN(mem_write),
-  .DI(mem_data_in),
-  .ADDR(mem_addr),
-  .BE(mem_type),
-  .DOUT(mem_data_out),
-  .CLK(),
-  .CSN(mem_mem_ignore)
-);
+// interface between core and data memory
+assign D_MEM_CSN  = mem_ignore;
+assign D_MEM_DOUT = mem_data_in;
+assign D_MEM_ADDR = mem_addr;
+assign D_MEM_WEN  = mem_write;
+assign D_MEM_BE   = mem_type;
 
 
 // pipeline register operation
-always @(posedge clk)
+always @(posedge CLK)
 begin
   //mem_wb_rs1_addr <= ex_mem_rs1_addr;
   //mem_wb_rs2_addr <= ex_mem_rs2_addr;
