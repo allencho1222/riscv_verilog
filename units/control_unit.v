@@ -1,4 +1,5 @@
 `include "../define/consts.v"
+`include "../define/control_signals.v"
 `include "../define/instructions.v"
 
 module control_unit (
