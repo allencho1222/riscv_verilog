@@ -1,3 +1,5 @@
+`include "../define/consts.v"
+
 module alu (
   // inputs are unsigned value
   input       [31:0] oper2,
@@ -33,6 +35,7 @@ begin
     ALU_SR:   alu_out = oper1 >> shamt;
     ALU_SRA:  alu_out = oper1 >>> shamt;
     default:  alu_out = oper1 + oper2;
+  endcase
 end
 
 endmodule

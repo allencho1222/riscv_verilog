@@ -1,11 +1,11 @@
 // memory operation type
 // fifth bit indicates whether it is U or not
-`define     MT_X      3'b00000  // no memory operation is required
-`define     MT_B      3'b00001
-`define     MT_H      3'b00011
-`define     MT_W      3'b01111
-`define     MT_BU     3'b10001
-`define     MT_HU     3'b10011
+`define     MT_X      5'b00000  // no memory operation is required
+`define     MT_B      5'b00001
+`define     MT_H      5'b00011
+`define     MT_W      5'b01111
+`define     MT_BU     5'b10001
+`define     MT_HU     5'b10011
 
 // memory write signal
 `define     M_X       2'b00
@@ -55,13 +55,13 @@
 `define     IMM_UJ    3'b101
 
 // ALU source2 signals   
-`define     ALU2_X    3'b00     // no source is required
-`define     ALU2_RS2  3'b01     
-`define     ALU2_IMM  3'b10     
+`define     ALU2_X    2'b00     // no source is required
+`define     ALU2_RS2  2'b01     
+`define     ALU2_IMM  2'b10     
 
 // ALU source1 signals
-`define     ALU1_X    3'b00     // no source is required
-`define     ALU1_RS1  3'b01
-`define     ALU1_PC   3'b10
-`define     ALU1_ZERO 3'b11
+`define     ALU1_X    2'b00     // no source is required
+`define     ALU1_RS1  2'b01
+`define     ALU1_PC   2'b10
+`define     ALU1_ZERO 2'b11
 

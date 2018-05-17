@@ -1,4 +1,8 @@
 `timescale 1ns/10ps
+`include "RISCV_CLKRST.v"
+`include "REG_FILE.v"
+`include "Mem_Model.v"
+`include "../core/riscv_core.v"
 
 module TB_RISCV ( );
 	//General Signals
@@ -12,7 +16,7 @@ module TB_RISCV ( );
 	wire            D_MEM_WEN;
 	wire            D_MEM_BE;
 	wire    [31:0]  D_MEM_DOUT;
-	wire    [11:0]  D_MEM_DOUT;
+	wire    [31:0]  D_MEM_DI;
 	wire            RF_WE;
 	wire    [4:0]   RF_RA1;
 	wire    [4:0]   RF_RA2;
@@ -28,7 +32,7 @@ module TB_RISCV ( );
 	);
 
 	//CPU Core top
-	RISCV_TOP riscv_top1 (
+	riscv_core core (
 		//General Signals
 		.CLK          (CLK),
 		.RSTn         (RSTn),

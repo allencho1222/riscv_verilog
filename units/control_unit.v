@@ -1,3 +1,6 @@
+`include "../define/consts.v"
+`include "../define/instructions.v"
+
 module control_unit (
   input [31:0]      instruction,
   // generated control signals
@@ -19,8 +22,8 @@ always @(instruction_in)
 begin
   casex (instruction)
     // load instructions
-    LB: begin
-      alu_op = ALU_ADD;
+    `LB: begin
+      alu_op= ALU_ADD;
       memory_type = MT_B;
       memory_rw = M_R;
       register_write = REG_W;
@@ -30,9 +33,9 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    LH: begin
+    `LH: begin
       alu_op = ALU_ADD;
-      memory_type = MT_H
+      memory_type = MT_H;
       memory_rw = M_R;
       register_write = REG_W;
       writeback_from = FROM_MEM;
@@ -41,7 +44,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    LW: begin
+    `LW: begin
       alu_op = ALU_ADD;
       memory_type = MT_W;
       memory_rw = M_R;
@@ -52,7 +55,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    LBU: begin
+    `LBU: begin
       alu_op = ALU_ADD;
       memory_type = MT_BU;
       memory_rw = M_R;
@@ -63,7 +66,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    LHU: begin
+    `LHU: begin
       alu_op = ALU_ADD;
       memory_type = MT_HU;
       memory_rw = M_R;
@@ -75,7 +78,7 @@ begin
       branch_type=BR_X;
     end
     // store instructions
-    SB: begin
+    `SB: begin
       alu_op = ALU_ADD;
       memory_type = MT_B;
       memory_rw = M_W;
@@ -86,7 +89,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SH: begin
+    `SH: begin
       alu_op = ALU_ADD;
       memory_type = MT_H;
       memory_rw = M_W;
@@ -97,7 +100,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SW: begin
+    `SW: begin
       alu_op = ALU_ADD;
       memory_type = MT_W;
       memory_rw = M_W;
@@ -109,7 +112,7 @@ begin
       branch_type=BR_X;
     end
     // shift instructions
-    SLL: begin
+    `SLL: begin
       alu_op = ALU_SL;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -120,7 +123,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SLLI: begin
+    `SLLI: begin
       alu_op = ALU_SL;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -131,7 +134,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SRL: begin
+    `SRL: begin
       alu_op = ALU_SR;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -142,7 +145,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SRLI: begin
+    `SRLI: begin
       alu_op = ALU_SR;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -153,7 +156,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SRA: begin
+    `SRA: begin
       alu_op = ALU_SRA;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -164,7 +167,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SRAI: begin
+    `SRAI: begin
       alu_op = ALU_SRA;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -176,7 +179,7 @@ begin
       branch_type=BR_X;
     end
     // arithmetic instructions
-    ADD: begin
+    `ADD: begin
       alu_op = ALU_ADD;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -187,7 +190,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    ADDI: begin
+    `ADDI: begin
       alu_op = ALU_ADD;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -198,7 +201,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SUB: begin
+    `SUB: begin
       alu_op = ALU_SUB;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -209,7 +212,7 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    LUI: begin
+    `LUI: begin
       alu_op = ALU_ADD;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -220,7 +223,7 @@ begin
       alu_src1 = ALU1_ZERO;
       branch_type=BR_X;
     end
-    AUIPC: begin
+    `AUIPC: begin
       alu_op = ALU_ADD;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -232,7 +235,7 @@ begin
       branch_type=BR_X;
     end
     // logical instructions
-    XOR: begin
+    `XOR: begin
       alu_op = ALU_XOR;
       memory_type = MT_X;
       memory_rw = M_X;
@@ -243,10 +246,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    XORI: begin
+    `XORI: begin
       alu_op = ALU_XOR;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_I;
@@ -254,10 +257,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    OR: begin
+    `OR: begin
       alu_op = ALU_OR;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_X;
@@ -265,10 +268,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    ORI: begin
+    `ORI: begin
       alu_op = ALU_OR;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_I;
@@ -276,10 +279,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    AND: begin
+    `AND: begin
       alu_op = ALU_AND;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_X;
@@ -287,10 +290,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    ANDI: begin
+    `ANDI: begin
       alu_op = ALU_AND;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_I;
@@ -299,10 +302,10 @@ begin
       branch_type=BR_X;
     end
     // compare instructions
-    SLT: begin
+    `SLT: begin
       alu_op = ALU_SLT;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_X;
@@ -310,10 +313,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SLTI: begin
+    `SLTI: begin
       alu_op = ALU_SLT;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_I;
@@ -321,10 +324,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SLTU: begin
+    `SLTU: begin
       alu_op = ALU_SLTU;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_X;
@@ -332,10 +335,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_X;
     end
-    SLTIU: begin
+    `SLTIU: begin
       alu_op = ALU_SLTU;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_ALU;
       imm_type = IMM_I;
@@ -344,10 +347,10 @@ begin
       branch_type=BR_X;
     end
     // branch instructions
-    BEQ: begin
+    `BEQ: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_SB;
@@ -355,10 +358,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_EQ;
     end
-    BNE: begin
+    `BNE: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_SB;
@@ -366,10 +369,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_NE;
     end
-    BLT: begin
+    `BLT: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_SB;
@@ -377,10 +380,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_LT;
     end
-    BGE: begin
+    `BGE: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_SB;
@@ -388,10 +391,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_GE;
     end
-    BLTU: begin
+    `BLTU: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_SB;
@@ -399,10 +402,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_LTU;
     end
-    BGEU: begin
+    `BGEU: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_SB;
@@ -410,10 +413,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_GEU;
     end
-    JAL: begin
+    `JAL: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_PC;
       imm_type = IMM_UJ;
@@ -421,10 +424,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_J;
     end
-    JALR: begin
+    `JALR: begin
       alu_op = ALU_ADD;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_W;
       writeback_from = FROM_PC;
       imm_type = IMM_I;
@@ -432,10 +435,10 @@ begin
       alu_src1 = ALU1_RS1;
       branch_type=BR_JR;
     end
-    BUBBLE: begin
+    `BUBBLE: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_X;
@@ -446,7 +449,7 @@ begin
     default: begin
       alu_op = ALU_X;
       memory_type = MT_X;
-      memory_rw = M_X
+      memory_rw = M_X;
       register_write = REG_X;
       writeback_from = FROM_X;
       imm_type = IMM_X;
@@ -454,7 +457,7 @@ begin
       alu_src1 = ALU1_X;
       branch_type=BR_X;
     end
+  endcase
 end
 
-
-
+endmodule
