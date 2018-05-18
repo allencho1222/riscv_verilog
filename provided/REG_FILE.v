@@ -18,6 +18,11 @@ module REG_FILE #(
     assign RD1 = RF[RA1];
     assign RD2 = RF[RA2];
 
+    initial
+    begin
+	    RF[0] = {32{1'b0}};;
+    end
+
     //Define synchronous write
     always @(posedge CLK)
 	begin

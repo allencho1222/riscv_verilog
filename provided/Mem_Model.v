@@ -15,7 +15,7 @@ module SP_SRAM #(parameter ROMDATA = "", AWIDTH = 12, SIZE = 4096) (
 	initial	
 	begin
 		if (ROMDATA != "")
-			$readmemb(ROMDATA, ram);
+			$readmemh(ROMDATA, ram);
 	end
 	
 	assign #1 DOUT = outline;

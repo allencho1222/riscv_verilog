@@ -85,6 +85,9 @@ reg                         mem_wb_ctrl_sig_reg_write;
 
 // ---------- instruction fetch stage ----------
 
+initial
+	pc = 32'b00000000_00000000_00000000_00000000;
+
 wire [(`DWIDTH - 1):0]  pc_plus_4;
 assign pc_plus_4 = pc + 4;
 
@@ -103,11 +106,11 @@ begin
   else begin
     if (id_do_branch) begin // when branch occurs, do flushing
       if_id_inst  <= `BUBBLE;
-      pc          <= branch_pc;
+      pc          <= id_branch_pc;
     end
     else begin
       if_id_inst  <= I_MEM_DI;// TODO: from instruction memory;
-      pc          <= pc_plus4;
+      pc          <= pc_plus_4;
     end
   end
 end
@@ -151,7 +154,7 @@ wire                            ctrl_sig_reg_write;
 
 control_unit control (
   .instruction (if_id_inst),
-  .alu_op(ctrl_sig_alu_fn),
+  .alu_fn(ctrl_sig_alu_fn),
   .memory_type(ctrl_sig_mem_type),
   .memory_rw(ctrl_sig_mem_rw),
   .writeback_from(ctrl_sig_wb_from),
@@ -183,8 +186,8 @@ wire [(`DWIDTH - 1):0] sign_ext_imm_uj;
 assign sign_ext_imm_i   = {{(`DWIDTH - `IMM_I_WIDTH){imm_i[`IMM_I_WIDTH - 1]}}, imm_i};
 assign sign_ext_imm_u   = {imm_u, {(`DWIDTH - `IMM_U_WIDTH){1'b0}}};
 assign sign_ext_imm_s   = {{(`DWIDTH - `IMM_S_WIDTH){imm_s[`IMM_S_WIDTH - 1]}}, imm_s};
-assign sign_ext_imm_uj  = {{(`DWIDTH - `IMM_UJ_WIDTH){imm_s[`IMM_UJ_WIDTH - 1]}}, imm_uj};
-assign sign_ext_imm_sb  = {{(`DWIDTH - `IMM_SB_WIDTH){imm_s[`IMM_SB_WIDTH - 1]}}, imm_sb};
+assign sign_ext_imm_uj  = {{(`DWIDTH - `IMM_UJ_WIDTH){imm_uj[`IMM_UJ_WIDTH - 1]}}, imm_uj};
+assign sign_ext_imm_sb  = {{(`DWIDTH - `IMM_SB_WIDTH){imm_sb[`IMM_SB_WIDTH - 1]}}, imm_sb};
 
 
 // branch logic
@@ -210,13 +213,14 @@ assign id_do_branch    =  (ctrl_sig_br_type == `BR_EQ)   ? id_signed_rs1_data ==
 
 
 // hazard detection unit  --- needed for stall
-// TODO : can we bypass data in case of arith_br_stall?
+// TODO : can we bypass data in case of arith_br_stall? (currently
+// I implemented bypass version of arith_br_stall
 wire load_use_stall;    // stall 1 cycle
-// except JAL instruction. It does not use rs1 or rs2
 //wire arith_br_stall;    // e.g.,) branch right after ADD, stall 1 cycle
+// TODO : can we reduce stall cycle of load_br_stall into 1 cycle?
 wire load_br_stall;     // stall 2 cycles
 assign load_use_stall = (id_ex_ctrl_sig_mem_rw == `M_R) &&   // check whether preceding is a load instruction
-                        (id_ex_rd_addr == id_rs1_addr || ((id_ex_rd_addr == id_rs2_addr) && (ctrl_sig_mem_rw != M_W)));   // ctrl_sig_mem_rw != M_W is for load-store 
+                        (id_ex_rd_addr == id_rs1_addr || ((id_ex_rd_addr == id_rs2_addr) && (ctrl_sig_mem_rw != `M_W)));   // ctrl_sig_mem_rw != M_W is for load-store 
 //assign arith_br_stall = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) &&   // check whether it is a branch instrucdtion
                         //(id_ex_ctrl_sig_reg_write == REG_W) && (id_ex_rd_addr != `REG_X0) && 
                         //(id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
@@ -228,7 +232,7 @@ assign load_br_stall  = (ctrl_sig_br_type != `BR_X && ctrl_sig_br_type != `BR_J)
 // bypassing logic for branch unit
 wire id_from_exe_mem_rs2, id_from_mem_wb_rs2;
 wire id_from_exe_mem_rs1, id_from_mem_wb_rs1;
-wire id_from_exe_alu_out_rs1, id_from_exe_alu_out_rs2; // for arith-br
+wire id_from_exe_alu_out_rs1, id_from_exe_alu_out_rs2; // for arith-br bypassing
 wire [(`DWIDTH - 1):0] id_bypassed_rs1_data, id_bypassed_rs2_data;
 assign id_from_exe_mem_rs2 =  (ex_mem_ctrl_sig_reg_write == `REG_W) && 
                               (ex_mem_rd_addr != `REG_X0) && 
@@ -274,8 +278,8 @@ begin
     id_ex_rd_addr   <= id_rd_addr;
     id_ex_rs1_addr  <= id_rs1_addr;
     id_ex_rs2_addr  <= id_rs2_addr;
-    id_ex_rs1_data  <= id_rs1_data;
-    id_ex_rs2_data  <= id_Rs2_data;
+    id_ex_rs1_data  <= RF_RD1;
+    id_ex_rs2_data  <= RF_RD2;
     case (ctrl_sig_imm_type)
       `IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
       `IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
@@ -322,9 +326,9 @@ assign ex_alu_oper1 = (id_ex_ctrl_sig_alu_src1 == `ALU1_RS1)  ? ex_bypassed_rs1_
                       (id_ex_ctrl_sig_alu_src1 == `ALU1_ZERO) ? {32{1'b0}}     : {32{1'b0}};
 
 alu alu_operation (
-  .src_op2(ex_alu_oper2),
-  .src_op1(ex_alu_oper1),
-  .alu_fn(id_ex_ctrl_alu_fn),
+  .oper2(ex_alu_oper2),
+  .oper1(ex_alu_oper1),
+  .alu_fn(id_ex_ctrl_sig_alu_fn),
   .alu_out(ex_alu_out)
 );
 
@@ -342,7 +346,7 @@ assign ex_from_exe_mem_rs1 =  (ex_mem_ctrl_sig_reg_write == `REG_W) &&
 assign ex_from_mem_wb_rs1  =  (mem_wb_ctrl_sig_reg_write == `REG_W) && 
                               (mem_wb_rd_addr != `REG_X0) && 
                               (mem_wb_rd_addr == id_ex_rs1_addr);
-// TODO : do we need !forward_from_exe_mem_rs? (because forward_from_exe_mem_rs2 is considered before it)
+// TODO : do we need !ex_from_exe_mem_rs? (because forward_from_exe_mem_rs2 is considered before it)
 assign ex_bypassed_rs2_data = (ex_from_exe_mem_rs2) ? ex_mem_alu_out :
                               (ex_from_mem_wb_rs2 && !ex_from_exe_mem_rs2) ? reg_write_data : id_ex_rs2_data;
 assign ex_bypassed_rs1_data = (ex_from_exe_mem_rs1) ? ex_mem_alu_out :
@@ -376,7 +380,7 @@ wire [(`DWIDTH - 1):0] mem_data_out_ext;  // only for the load instruction
 assign mem_addr           = ex_mem_alu_out;
 assign mem_write          = (ex_mem_ctrl_sig_mem_rw == `M_W) ? 1'b0 : 1'b1; // 0: write, 1: read
 assign mem_ignore         = (ex_mem_ctrl_sig_mem_rw == `M_X) ? 1'b1 : 1'b0;    // 0: memory opeation occurs, 1: does not occur
-assign mem_type           = ex_mem_ctrl_mem_type;
+assign mem_type           = ex_mem_ctrl_sig_mem_type;
 // TODO: I'm not sure load-store dependence is correctly handled. (bypassing logic)
 assign mem_is_load_store  = (mem_write == 1'b0 && (mem_wb_rd_addr == ex_mem_rs2_addr));
 assign mem_data_in        = (mem_is_load_store) ? mem_wb_alu_out : ex_mem_mem_data;
@@ -386,15 +390,13 @@ assign mem_data_out_ext   = (mem_type == `MT_HU) ? {{(`DWIDTH - `HALF){1'b0}}, D
                             (mem_type == `MT_H)  ? {{(`DWIDTH - `HALF){D_MEM_DI[`HALF - 1]}}, D_MEM_DI[(`HALF - 1):0]} :
                             (mem_type == `MT_B)  ? {{(`DWIDTH - `BYTE){D_MEM_DI[`BYTE - 1]}}, D_MEM_DI[(`BYTE - 1):0]} :
                                                   {32{1'b0}};
-// TODO : where to put multiplexr which is used for data selection between memory out and alu out
-// TODO : write back stage or memory stage?
 
 // interface between core and data memory
 assign D_MEM_CSN  = mem_ignore;
 assign D_MEM_DOUT = mem_data_in;
 assign D_MEM_ADDR = mem_addr;
 assign D_MEM_WEN  = mem_write;
-assign D_MEM_BE   = mem_type[3:0];
+assign D_MEM_BE   = mem_type;
 
 
 // pipeline register operation
@@ -412,10 +414,9 @@ end
 
 
 // ---------- write back stage ----------
-// TODO : how about using reg_write_data mux before going to write-back stage (assign this in memory stage)
 assign reg_write_addr = mem_wb_rd_addr;
 assign reg_write_data = (mem_wb_ctrl_sig_wb_from == `FROM_ALU) ? mem_wb_alu_out :
-                        (mem_wb_ctrl_sib_wb_from == `FROM_MEM) ? mem_wb_mem_data_out :
+                        (mem_wb_ctrl_sig_wb_from == `FROM_MEM) ? mem_wb_mem_data_out :
                         (mem_wb_ctrl_sig_wb_from == `FROM_PC)  ? pc + 4 : {32{1'b0}};
 
 endmodule

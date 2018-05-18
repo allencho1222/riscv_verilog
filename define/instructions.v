@@ -23,7 +23,7 @@
 //                                    imm[20][10:1][11][19:12]             rd               opcode
 
 // no operation
-`define     BUBBLE  32'b00000000000000000000000000000000000
+`define     BUBBLE  32'b00000000_00000000_00000000_00000000
 
 // load instructions    --- I-type
 `define     LB      32'bxxxxxxxxxxx_xxxxx_000_xxxxx_0000011
