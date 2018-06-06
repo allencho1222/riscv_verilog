@@ -91,28 +91,23 @@ initial
 wire [(`DWIDTH - 1):0]  pc_plus_4;
 assign pc_plus_4 = pc + 4;
 
+always @(posedge CLK)
+begin
+  if (load_br_stall)
+    pc <= if_id_pc;
+  else if (id_do_branch)
+    pc <= id_branch_pc;
+  else if (!load_use_stall)
+    pc <= pc + 4;
+end
 
 // TODO: how to deal with 2 stall cycles?
 always @(posedge CLK)
 begin
-  if_id_pc <= pc;
-  if (load_use_stall /*|| arith_br_stall*/ || ex_mem_load_br_stall) begin
-    if_id_inst  <= `BUBBLE;
-    if (ex_mem_load_br_stall) // 2 cycle stall
-      pc <= id_ex_pc;
-    else
-      pc <= if_id_pc;
-  end
-  else begin
-    if (id_do_branch) begin // when branch occurs, do flushing
-      if_id_inst  <= `BUBBLE;
-      pc          <= id_branch_pc;
-    end
-    else begin
-      if_id_inst  <= I_MEM_DI;// TODO: from instruction memory;
-      pc          <= pc_plus_4;
-    end
-  end
+  if (load_br_stall || id_do_branch)
+    if_id_inst <= `BUBBLE;
+  else if (!load_use_stall)
+    if_id_inst <= I_MEM_DI;
 end
 
 // interface between core and instruction memory
@@ -264,8 +259,7 @@ assign id_bypassed_rs1_data = (id_from_exe_alu_out_rs1) ? ex_alu_out :
 always @(posedge CLK)
 begin
   id_ex_pc <= if_id_pc;
-  id_ex_load_br_stall <= load_br_stall;
-  if (ex_mem_load_br_stall) begin // 2 cycle stall
+  if (load_use_stall) begin	// this includes load_br_stall
     id_ex_ctrl_sig_alu_fn     <= `ALU_X;
     id_ex_ctrl_sig_alu_src2   <= `ALU2_X;
     id_ex_ctrl_sig_alu_src1   <= `ALU1_X;
@@ -274,7 +268,7 @@ begin
     id_ex_ctrl_sig_wb_from    <= `FROM_X;
     id_ex_ctrl_sig_reg_write  <= `REG_X;
   end
-  if (!load_use_stall /*&& !arith_br_stall*/ && !load_br_stall) begin
+  else if (!load_use_stall) begin	// this includes !load_br_stall
     id_ex_rd_addr   <= id_rd_addr;
     id_ex_rs1_addr  <= id_rs1_addr;
     id_ex_rs2_addr  <= id_rs2_addr;
@@ -296,15 +290,6 @@ begin
     id_ex_ctrl_sig_mem_rw     <= ctrl_sig_mem_rw;
     id_ex_ctrl_sig_wb_from    <= ctrl_sig_wb_from;
     id_ex_ctrl_sig_reg_write  <= ctrl_sig_reg_write;
-  end
-  else  begin
-    id_ex_ctrl_sig_alu_fn     <= `ALU_X;
-    id_ex_ctrl_sig_alu_src2   <= `ALU2_X;
-    id_ex_ctrl_sig_alu_src1   <= `ALU1_X;
-    id_ex_ctrl_sig_mem_type   <= `MT_X;
-    id_ex_ctrl_sig_mem_rw     <= `M_X;
-    id_ex_ctrl_sig_wb_from    <= `FROM_X;
-    id_ex_ctrl_sig_reg_write  <= `REG_X;
   end
 end
   
@@ -383,7 +368,7 @@ assign mem_ignore         = (ex_mem_ctrl_sig_mem_rw == `M_X) ? 1'b1 : 1'b0;    /
 assign mem_type           = ex_mem_ctrl_sig_mem_type;
 // TODO: I'm not sure load-store dependence is correctly handled. (bypassing logic)
 assign mem_is_load_store  = (mem_write == 1'b0 && (mem_wb_rd_addr == ex_mem_rs2_addr));
-assign mem_data_in        = (mem_is_load_store) ? mem_wb_alu_out : ex_mem_mem_data;
+assign mem_data_in        = (mem_is_load_store) ? mem_wb_mem_data_out : ex_mem_mem_data;
 // only for the load instruction
 assign mem_data_out_ext   = (mem_type == `MT_HU) ? {{(`DWIDTH - `HALF){1'b0}}, D_MEM_DI[(`HALF - 1):0]} :
                             (mem_type == `MT_BU) ? {{(`DWIDTH - `BYTE){1'b0}}, D_MEM_DI[(`BYTE - 1):0]} :
