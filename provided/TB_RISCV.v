@@ -14,7 +14,7 @@ module TB_RISCV ( );
 	wire    [31:0]  I_MEM_ADDR;
 	wire            D_MEM_CSN;
 	wire            D_MEM_WEN;
-	wire    [4:0]   D_MEM_BE;
+	wire    [4:0]   D_MEM_BE; // I use 5-bits for this signal
 	wire    [31:0]  D_MEM_DOUT;
 	wire    [31:0]  D_MEM_ADDR;
 	wire    [31:0]  D_MEM_DI;
@@ -56,7 +56,7 @@ module TB_RISCV ( );
 		.RF_RD2       (RF_RD2),
 		.RF_WD        (RF_WD)
 		//Control Singals
-		//.DE_OP_EN     (DE_OP_EN) //Delayed branch mode
+		.DE_OP_EN     (1'b0) //Delayed branch mode
 	);
 
 	//I-Memory
@@ -84,7 +84,7 @@ module TB_RISCV ( );
 		.DOUT   (D_MEM_DOUT),
 		.ADDR   (D_MEM_ADDR[11:0]),
 		.WEN    (D_MEM_WEN),
-		.BE     (D_MEM_BE[3:0])
+		.BE     (D_MEM_BE[3:0])   // truncate bits into [3:0] since [4] does not need anymore in this module
 	);
 
 	//Reg File

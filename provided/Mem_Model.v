@@ -15,12 +15,12 @@ module SP_SRAM #(parameter ROMDATA = "", AWIDTH = 12, SIZE = 4096) (
 	initial	
 	begin
 		if (ROMDATA != "")
-			$readmemh(ROMDATA, ram);
+			$readmemb(ROMDATA, ram);
 	end
 	
 	assign #1 DOUT = outline;
 
-	always @ (*)
+	always @ (posedge CLK)
 	begin
 		if (~CSN)
 		begin

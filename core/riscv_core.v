@@ -3,7 +3,7 @@
 `include "../define/control_signals.v"
 `include "../define/consts.v"
 
-module riscv_core(
+module RISCV_TOP (
   // general signals
   input CLK,
   input RSTn,
@@ -25,8 +25,8 @@ module riscv_core(
   output [(`REG_ADDR_LEN - 1):0] RF_WA,   // core will send address of destination register
   input [(`DWIDTH - 1):0] RF_RD1,       // core will receive rs1 data
   input [(`DWIDTH - 1):0] RF_RD2,       // core will receive rs2 data
-  output [(`DWIDTH - 1):0] RF_WD        // core will send data to be written
-  //input DE_OP_EN
+  output [(`DWIDTH - 1):0] RF_WD,       // core will send data to be written
+  input DE_OP_EN                        // enable delayed branch mode
 );
 
 // ---------- pipeline registers ----------
@@ -104,7 +104,7 @@ end
 // TODO: how to deal with 2 stall cycles?
 always @(posedge CLK)
 begin
-  if (load_br_stall || id_do_branch)
+  if (!DE_OP_EN && (load_br_stall || id_do_branch))
     if_id_inst <= `BUBBLE;
   else if (!load_use_stall)
     if_id_inst <= I_MEM_DI;
@@ -268,7 +268,7 @@ begin
     id_ex_ctrl_sig_wb_from    <= `FROM_X;
     id_ex_ctrl_sig_reg_write  <= `REG_X;
   end
-  else if (!load_use_stall) begin	// this includes !load_br_stall
+  else begin	// this includes !load_br_stall
     id_ex_rd_addr   <= id_rd_addr;
     id_ex_rs1_addr  <= id_rs1_addr;
     id_ex_rs2_addr  <= id_rs2_addr;
