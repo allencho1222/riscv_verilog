@@ -98,7 +98,7 @@ begin
   else if (id_do_branch)
     pc <= id_branch_pc;
   else if (!load_use_stall)
-    pc <= pc + 4;
+    pc <= pc_plus_4;
 end
 
 // TODO: how to deal with 2 stall cycles?
@@ -402,6 +402,6 @@ end
 assign reg_write_addr = mem_wb_rd_addr;
 assign reg_write_data = (mem_wb_ctrl_sig_wb_from == `FROM_ALU) ? mem_wb_alu_out :
                         (mem_wb_ctrl_sig_wb_from == `FROM_MEM) ? mem_wb_mem_data_out :
-                        (mem_wb_ctrl_sig_wb_from == `FROM_PC)  ? pc + 4 : {32{1'b0}};
+                        (mem_wb_ctrl_sig_wb_from == `FROM_PC)  ? pc_plus_4 : {32{1'b0}};
 
 endmodule
