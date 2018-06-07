@@ -54,7 +54,7 @@ module TB_RISCV ( );
 		.RF_WA        (RF_WA),
 		.RF_RD1       (RF_RD1),
 		.RF_RD2       (RF_RD2),
-		.RF_WD        (RF_WD)
+		.RF_WD        (RF_WD),
 		//Control Singals
 		.DE_OP_EN     (1'b0) //Delayed branch mode
 	);
