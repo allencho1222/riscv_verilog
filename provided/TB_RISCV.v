@@ -32,7 +32,7 @@ module TB_RISCV ( );
 	);
 
 	//CPU Core top
-	riscv_core core (
+	RISCV_TOP core (
 		//General Signals
 		.CLK          (CLK),
 		.RSTn         (RSTn),

@@ -71,7 +71,6 @@ reg [(`MEM_WRITE_LEN - 1):0]  ex_mem_ctrl_sig_mem_rw;
 reg [(`WB_FROM_LEN - 1):0]    ex_mem_ctrl_sig_wb_from;
 
 reg                           ex_mem_ctrl_sig_reg_write;
-reg                           ex_mem_load_br_stall;
 
 // MEM / WB pipeline registers
 reg [(`REG_ADDR_LEN - 1):0] mem_wb_rd_addr;
@@ -104,6 +103,7 @@ end
 // TODO: how to deal with 2 stall cycles?
 always @(posedge CLK)
 begin
+  if_id_pc <= pc;
   if (load_br_stall || (id_do_branch && !DE_OP_EN))
     if_id_inst <= `BUBBLE;
   else if (!load_use_stall)
@@ -350,7 +350,6 @@ begin
   ex_mem_ctrl_sig_mem_rw    <= id_ex_ctrl_sig_mem_rw;
   ex_mem_ctrl_sig_wb_from   <= id_ex_ctrl_sig_wb_from;
   ex_mem_ctrl_sig_reg_write <= id_ex_ctrl_sig_reg_write;
-  ex_mem_load_br_stall      <= id_ex_load_br_stall;
 end
 
 
