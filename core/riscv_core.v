@@ -104,7 +104,7 @@ end
 // TODO: how to deal with 2 stall cycles?
 always @(posedge CLK)
 begin
-  if (!DE_OP_EN && (load_br_stall || id_do_branch))
+  if (load_br_stall || (id_do_branch && !DE_OP_EN))
     if_id_inst <= `BUBBLE;
   else if (!load_use_stall)
     if_id_inst <= I_MEM_DI;
