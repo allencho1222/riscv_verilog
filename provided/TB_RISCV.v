@@ -61,9 +61,9 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("test5.bin"), //Initialize I-Memory
+		.ROMDATA ("./test1.bin"), //Initialize I-Memory
 		.AWIDTH  (10),
-		.SIZE    (18)	// it was .SIZE (1024)
+		.SIZE    (1024)	// it was .SIZE (1024)
 	) i_mem1 (
 		.CLK    (CLK),
 		.CSN    (I_MEM_CSN),

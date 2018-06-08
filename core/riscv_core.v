@@ -96,6 +96,8 @@ begin
     pc <= id_branch_pc;
   else if (!load_use_stall)
     pc <= pc_plus_4;
+  else
+    pc <= pc_plus_4;
 end
 
 // TODO: how to deal with 2 stall cycles?
@@ -105,6 +107,8 @@ begin
   if (load_br_stall || (id_do_branch && !DE_OP_EN))
     if_id_inst <= `BUBBLE;
   else if (!load_use_stall)
+    if_id_inst <= I_MEM_DI;
+  else
     if_id_inst <= I_MEM_DI;
 end
 
