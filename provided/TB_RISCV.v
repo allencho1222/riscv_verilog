@@ -61,7 +61,7 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("./test5.txt"), //Initialize I-Memory
+		.ROMDATA ("test5.bin"), //Initialize I-Memory
 		.AWIDTH  (10),
 		.SIZE    (18)	// it was .SIZE (1024)
 	) i_mem1 (
@@ -149,7 +149,6 @@ module TB_RISCV ( );
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_reg_write: %b\t\t\t\t", core.id_ex_ctrl_sig_reg_write,
 			 "ex_mem_ctrl_sig_reg_write: %b\t\t\t\t", core.ex_mem_ctrl_sig_reg_write,
 		 	 "mem_wb_ctrl_sig_reg_write: %b\n", core.mem_wb_ctrl_sig_reg_write);
-		$display("\t\t\t\t\t\tid_ex_load_br_stall: %b\t\t\t\t\t", core.id_ex_load_br_stall);
 
 	end
 
