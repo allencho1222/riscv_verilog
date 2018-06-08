@@ -57,8 +57,6 @@ reg [(`WB_FROM_LEN - 1):0]    id_ex_ctrl_sig_wb_from;
 
 reg                           id_ex_ctrl_sig_reg_write;
 
-reg                           id_ex_load_br_stall;
-
 
 // EX / MEM pipeline registers
 reg [(`REG_ADDR_LEN - 1):0] ex_mem_rd_addr;
