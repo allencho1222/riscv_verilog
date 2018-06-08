@@ -1,5 +1,8 @@
 analyze -define $DEFINES -f verilog [list \
 ~/20172718_riscv/core/riscv_core.v \
+~/20172718_riscv/define/consts.v \
+~/20172718_riscv/define/control_signals.v \
+~/20172718_riscv/define/instructions.v \
 ~/20172718_riscv/provided/REG_FILE.v \
 ~/20172718_riscv/provided/Mem_Model.v \
 ~/20172718_riscv/provided/RISCV_CLKRST.v \
