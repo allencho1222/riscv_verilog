@@ -61,7 +61,7 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("/Users/sungjun/riscv_verilog/testset/test2.txt"), //Initialize I-Memory
+		.ROMDATA ("/Users/sungjun/riscv_verilog/testset/test5.txt"), //Initialize I-Memory
 		.AWIDTH  (10),
 		.SIZE    (1024)	// it was .SIZE (1024)
 	) i_mem1 (
@@ -82,7 +82,7 @@ module TB_RISCV ( );
 		.CSN    (D_MEM_CSN),
 		.DI     (D_MEM_DI),
 		.DOUT   (D_MEM_DOUT),
-		.ADDR   (D_MEM_ADDR[11:0]),
+		.ADDR   (D_MEM_ADDR[13:2]),
 		.WEN    (D_MEM_WEN),
 		.BE     (D_MEM_BE[3:0])   // truncate bits into [3:0] since [4] does not need anymore in this module
 	);
@@ -163,7 +163,7 @@ module TB_RISCV ( );
 	$display("mem_is_load_store: %b\n", core.mem_is_load_store);
 	$display("mem_data_out_ext: %b\n", core.mem_data_out_ext);
 	$display("data read: %b\n", d_mem1.outline);
-	$display("stack: %b\n", d_mem1.ram[4096'hEFC]);
+	$display("stack: %b\n", d_mem1.ram[4096'hF00]);
 
     $display("\n\nx0: %h\t\t\t\t", reg_file1.RF[0], "x1: %h\t\t\t\t", reg_file1.RF[1], "x2: %h\t\t\t\t", reg_file1.RF[2],
              "x3: %h\t\t\t\t", reg_file1.RF[3], "x4: %h\t\t\t\t", reg_file1.RF[4], "x5: %h\t\t\t\t", reg_file1.RF[5],

@@ -30,7 +30,7 @@ assign shamt = oper2[4:0];
     (alu_fn == `ALU_XOR) ? oper1 ^ oper2 :
     (alu_fn == `ALU_SL)  ? oper1 << shamt :
     (alu_fn == `ALU_SR)  ? oper1 >> shamt :
-    (alu_fn == `ALU_SRA) ? oper1 >>> shamt : oper1 + oper2;
+    (alu_fn == `ALU_SRA) ? signed_oper1 >>> shamt : oper1 + oper2;
     /*
   case (alu_fn)
     `ALU_ADD:  alu_out = oper1 + oper2;

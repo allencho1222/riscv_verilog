@@ -84,6 +84,7 @@ reg [(`MEM_TYPE_LEN - 1):0]	mem_wb_ctrl_sig_mem_type;
 reg [(`WB_FROM_LEN - 1):0]  mem_wb_ctrl_sig_wb_from;
 reg                         mem_wb_ctrl_sig_reg_write;
 reg							mem_wb_ctrl_sig_mem_rw;
+reg	[1:0]					mem_wb_mem_pos;
 
 
 // ---------- instruction fetch stage ----------
@@ -287,9 +288,7 @@ begin
       `IMM_UJ:   id_ex_imm_data <= sign_ext_imm_uj;
       `IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
       default:  id_ex_imm_data <= {32{1'b0}};      // IMM_X
-    endcase
-   
-    //id_ex_mem_data            <= id_bypassed_rs2_data;
+    endcase //id_ex_mem_data            <= id_bypassed_rs2_data;
     id_ex_ctrl_sig_imm_type   <= ctrl_sig_imm_type;
     id_ex_ctrl_sig_alu_fn     <= ctrl_sig_alu_fn;
     id_ex_ctrl_sig_alu_src2   <= ctrl_sig_alu_src2;
@@ -311,6 +310,7 @@ assign ex_alu_oper2 = (id_ex_ctrl_sig_alu_src2 == `ALU2_RS2)  ? ex_bypassed_rs2_
                       (id_ex_ctrl_sig_alu_src2 == `ALU2_IMM)  ? id_ex_imm_data : {32{1'b0}};
 
 assign ex_alu_oper1 = (id_ex_ctrl_sig_alu_src1 == `ALU1_RS1)  ? ex_bypassed_rs1_data   :
+					  (id_ex_ctrl_sig_alu_src1 == `ALU1_PC)   ? id_ex_pc			   :
                       (id_ex_ctrl_sig_alu_src1 == `ALU1_ZERO) ? {32{1'b0}}     : {32{1'b0}};
 
 alu alu_operation (
@@ -373,23 +373,56 @@ assign load_mem_type      = mem_wb_ctrl_sig_mem_type;
 assign mem_is_load_store  = (mem_wb_ctrl_sig_mem_rw === `M_R && mem_write === 1'b0 && (mem_wb_rd_addr == ex_mem_rs2_addr));
 assign mem_data_in        = (mem_is_load_store === 1'b1) ? mem_data_out_ext : ex_mem_mem_data;
 // only for the load instruction
+assign mem_data_out_ext	  = (load_mem_type === `MT_B && mem_wb_mem_pos[1:0] == 2'b00) ? {{24{D_MEM_DI[7]}}, D_MEM_DI[7:0]} :
+							(load_mem_type === `MT_B && mem_wb_mem_pos[1:0] == 2'b01) ? {{24{D_MEM_DI[15]}}, D_MEM_DI[15:8]} :
+							(load_mem_type === `MT_B && mem_wb_mem_pos[1:0] == 2'b10) ? {{24{D_MEM_DI[23]}}, D_MEM_DI[23:16]} :
+							(load_mem_type === `MT_B && mem_wb_mem_pos[1:0] == 2'b11) ? {{24{D_MEM_DI[31]}}, D_MEM_DI[31:24]} :
+							(load_mem_type === `MT_H && mem_wb_mem_pos[1:0] == 2'b00) ? {{16{D_MEM_DI[15]}}, D_MEM_DI[15:0]} :
+							(load_mem_type === `MT_H && mem_wb_mem_pos[1:0] == 2'b10) ? {{16{D_MEM_DI[31]}}, D_MEM_DI[31:16]} :
+							(load_mem_type === `MT_BU && mem_wb_mem_pos[1:0] == 2'b00) ? {{24{1'b0}}, D_MEM_DI[7:0]} :
+							(load_mem_type === `MT_BU && mem_wb_mem_pos[1:0] == 2'b01) ? {{24{1'b0}}, D_MEM_DI[15:8]} :
+							(load_mem_type === `MT_BU && mem_wb_mem_pos[1:0] == 2'b10) ? {{24{1'b0}}, D_MEM_DI[23:16]} :
+							(load_mem_type === `MT_BU && mem_wb_mem_pos[1:0] == 2'b11) ? {{24{1'b0}}, D_MEM_DI[31:24]} :
+							(load_mem_type === `MT_HU && mem_wb_mem_pos[1:0] == 2'b00) ? {{16{1'b0}}, D_MEM_DI[15:0]} :
+							(load_mem_type === `MT_HU && mem_wb_mem_pos[1:0] == 2'b00) ? {{16{1'b0}}, D_MEM_DI[31:16]} :
+							(load_mem_type === `MT_W) ? D_MEM_DI : {32{1'b0}};
+							
+						 
+/*
 assign mem_data_out_ext   = (load_mem_type === `MT_HU) ? {{(`DWIDTH - `HALF){1'b0}}, D_MEM_DI[(`HALF - 1):0]} :
                             (load_mem_type === `MT_BU) ? {{(`DWIDTH - `BYTE){1'b0}}, D_MEM_DI[(`BYTE - 1):0]} :
                             (load_mem_type === `MT_H)  ? {{(`DWIDTH - `HALF){D_MEM_DI[`HALF - 1]}}, D_MEM_DI[(`HALF - 1):0]} :
                             (load_mem_type === `MT_B)  ? {{(`DWIDTH - `BYTE){D_MEM_DI[`BYTE - 1]}}, D_MEM_DI[(`BYTE - 1):0]} :
 							(load_mem_type === `MT_W)  ? D_MEM_DI : {32{1'b0}};
+*/
 
 // interface between core and data memory
 assign D_MEM_CSN  = mem_ignore;
-assign D_MEM_DOUT = mem_data_in;
+//assign D_MEM_DOUT = mem_data_in;
 assign D_MEM_ADDR = mem_addr;
 assign D_MEM_WEN  = mem_write;
-assign D_MEM_BE   = store_mem_type;
+//assign D_MEM_BE   	=	store_mem_type;
+assign D_MEM_BE 	=	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b00) ? 4'b0001 :
+					 	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b01) ? 4'b0010 :
+					 	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b10) ? 4'b0100 :
+					 	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b11) ? 4'b1000 :
+					 	(store_mem_type === `MT_H && mem_addr[1:0] == 2'b00) ? 4'b0011 :
+					 	(store_mem_type === `MT_H && mem_addr[1:0] == 2'b10) ? 4'b1100 :
+						(store_mem_type === `MT_W) ? 4'b1111 : 4'b0000;
+assign D_MEM_DOUT 	=	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b00) ? mem_data_in :
+					 	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b01) ? {mem_data_in[23:0], {8{1'b0}}} :
+					 	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b10) ? {mem_data_in[15:0], {16{1'b0}}} :
+					 	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b11) ? {mem_data_in[7:0], {24{1'b0}}} :
+					 	(store_mem_type === `MT_H && mem_addr[1:0] == 2'b00) ? mem_data_in :
+					 	(store_mem_type === `MT_H && mem_addr[1:0] == 2'b10) ? {mem_data_in[15:0], {16{1'b0}}} :
+						(store_mem_type === `MT_W) ? mem_data_in : {32{1'b0}};
+						
 
 
 // pipeline register operation
 always @(posedge CLK)
 begin
+  mem_wb_mem_pos <= mem_addr[1:0];
   mem_wb_rd_addr <= ex_mem_rd_addr;
   mem_wb_alu_out <= ex_mem_alu_out;
   mem_wb_ctrl_sig_mem_rw <= ex_mem_ctrl_sig_mem_rw;
