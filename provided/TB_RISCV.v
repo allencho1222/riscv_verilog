@@ -61,7 +61,7 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("./test1.bin"), //Initialize I-Memory
+		.ROMDATA ("/Users/sungjun/riscv_verilog/testset/test2.txt"), //Initialize I-Memory
 		.AWIDTH  (10),
 		.SIZE    (1024)	// it was .SIZE (1024)
 	) i_mem1 (
@@ -91,8 +91,7 @@ module TB_RISCV ( );
 	REG_FILE #(
 		.DWIDTH (32),
 		.MDEPTH (32),
-		.AWIDTH (5)
-	) reg_file1 (
+		.AWIDTH (5)) reg_file1 (
 		.CLK    (CLK),
 		.WE     (RF_WE),
 		.RA1    (RF_RA1),
@@ -113,13 +112,13 @@ module TB_RISCV ( );
 	begin
 		// print debugging information
 		$display("current pc: %b\n", core.pc);
-		$display("----- IF / ID pipeline registers -----\t\t",
-			 "----- ID / EX pipeline registers -----\t\t\t",
-			 "----- EX / MEM pipeline registers -----\t\t\t",
+		$display("----- IF / ID pipeline registers -----\t\t\t\t",
+			 "----- ID / EX pipeline registers -----\t\t\t\t",
+			 "----- EX / MEM pipeline registers -----\t\t\t\t",
 			 "----- MEM / WB pipeline registers -----\n");
-		$display("if_id_inst: %b\tdo_branch: %b\n", core.if_id_inst, core.id_do_branch);
-		$display("\t\t\t\t\t\tid_bypassed_rs1_data: %b", core.id_bypassed_rs1_data);
-		$display("\t\t\t\t\t\tid_bypassed_rs2_data: %b", core.id_bypassed_rs2_data);
+		$display("if_id_inst: %h\tdo_branch: %b\n", core.if_id_inst, core.id_do_branch);
+		$display("\t\t\t\t\t\t\t\t\tid_bypassed_rs1_data: %b", core.id_bypassed_rs1_data);
+		$display("\t\t\t\t\t\t\t\t\tid_bypassed_rs2_data: %b", core.id_bypassed_rs2_data);
 		$display("if_id_pc:   %b\tbranch_pc: %b\n", core.if_id_pc, core.id_branch_pc);
 		$display("\t\t\t\t\t\tid_ex_pc:  %b\n", core.id_ex_pc);
 		$display("\t\t\t\t\t\tid_ex_rd_addr: %b\t\t\t\t\t", core.id_ex_rd_addr,
@@ -149,6 +148,18 @@ module TB_RISCV ( );
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_reg_write: %b\t\t\t\t", core.id_ex_ctrl_sig_reg_write,
 			 "ex_mem_ctrl_sig_reg_write: %b\t\t\t\t", core.ex_mem_ctrl_sig_reg_write,
 		 	 "mem_wb_ctrl_sig_reg_write: %b\n", core.mem_wb_ctrl_sig_reg_write);
+    $display("\n\nx0: %h\t\t\t\t", reg_file1.RF[0], "x1: %h\t\t\t\t", reg_file1.RF[1], "x2: %h\t\t\t\t", reg_file1.RF[2],
+             "x3: %h\t\t\t\t", reg_file1.RF[3], "x4: %h\t\t\t\t", reg_file1.RF[4], "x5: %h\t\t\t\t", reg_file1.RF[5],
+             "x6: %h\t\t\t\t", reg_file1.RF[6], "x7: %h\t\t\t\t", reg_file1.RF[7], "x8: %h\t\t\t\t", reg_file1.RF[8]);
+    $display("x9: %h\t\t\t\t", reg_file1.RF[9], "x10: %h\t\t\t\t", reg_file1.RF[10], "x11: %h\t\t\t\t", reg_file1.RF[11],
+             "x12: %h\t\t\t\t", reg_file1.RF[12], "x13: %h\t\t\t\t", reg_file1.RF[13], "x14: %h\t\t\t\t", reg_file1.RF[14],
+             "x15: %h\t\t\t\t", reg_file1.RF[15], "x16: %h\t\t\t\t", reg_file1.RF[16], "x17: %h\t\t\t\t", reg_file1.RF[17],
+             "x18: %h\t\t\t\t", reg_file1.RF[18], "x19: %h\t\t\t\t", reg_file1.RF[19], "x20: %h\t\t\t\t", reg_file1.RF[20]);
+    $display("x21: %h\t\t\t\t", reg_file1.RF[21], "x22: %h\t\t\t\t", reg_file1.RF[22], "x23: %h\t\t\t\t", reg_file1.RF[23],
+             "x24: %h\t\t\t\t", reg_file1.RF[24], "x25: %h\t\t\t\t", reg_file1.RF[25], "x26: %h\t\t\t\t", reg_file1.RF[26],
+             "x27: %h\t\t\t\t", reg_file1.RF[27], "x28: %h\t\t\t\t", reg_file1.RF[28], "x29: %h\t\t\t\t", reg_file1.RF[29],
+             "x30: %h\t\t\t\t", reg_file1.RF[30], "x31: %h\t\t\t\t", reg_file1.RF[31], "\n\n");
+
 
 	end
 

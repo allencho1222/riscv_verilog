@@ -20,7 +20,9 @@ module REG_FILE #(
 
     initial
     begin
-	    RF[0] = {32{1'b0}};;
+	    RF[0] = {32{1'b0}};
+      RF[2] = 32'b00000000_00000000_00001111_00000000;
+      RF[3] = 32'b00000000_00000000_00000001_00000000;
     end
 
     //Define synchronous write

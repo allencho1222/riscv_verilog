@@ -16,10 +16,7 @@ module control_unit (
   output reg [(`BR_TYPE_LEN - 1):0]  branch_type
 );
 
-wire [31:0] instruction_in;
-assign instruction_in = instruction;
-
-always @(instruction_in)
+always @(instruction)
 begin
   casex (instruction)
     // load instructions
