@@ -116,7 +116,7 @@ module TB_RISCV ( );
 			 "----- ID / EX pipeline registers -----\t\t\t\t",
 			 "----- EX / MEM pipeline registers -----\t\t\t\t",
 			 "----- MEM / WB pipeline registers -----\n");
-		$display("if_id_inst: %h\tdo_branch: %b\n", core.if_id_inst, core.id_do_branch);
+		$display("if_id_inst: %h\tdo_branch: %b\n", core.I_MEM_DI, core.id_do_branch);
 		$display("\t\t\t\t\t\t\t\t\tid_bypassed_rs1_data: %b", core.id_bypassed_rs1_data);
 		$display("\t\t\t\t\t\t\t\t\tid_bypassed_rs2_data: %b", core.id_bypassed_rs2_data);
 		$display("if_id_pc:   %b\tbranch_pc: %b\n", core.if_id_pc, core.id_branch_pc);
@@ -127,13 +127,15 @@ module TB_RISCV ( );
 		$display("\t\t\t\t\t\tid_ex_rs1_addr: %b\n", core.id_ex_rs1_addr);
 		$display("\t\t\t\t\t\tid_ex_rs2_addr: %b\t\t\t\t\t", core.id_ex_rs2_addr,
 			 "ex_mem_rs2_addr: %b\n", core.ex_mem_rs2_addr);
-		$display("\t\t\t\t\t\tid_ex_rs1_data: %b\t", core.id_ex_rs1_data,
+		$display(
 			 "ex_mem_mem_data: %b\t", core.ex_mem_mem_data,
 		 	 "mem_wb_mem_data_out: %b\n", core.mem_wb_mem_data_out);
-		$display("\t\t\t\t\t\tid_ex_rs2_data: %b\t", core.id_ex_rs2_data,
+		$display(
 			 "ex_mem_alu_out: %b\t", core.ex_mem_alu_out,
 		 	 "mem_wb_alu_out: %b\n", core.mem_wb_alu_out);
 		$display("\t\t\t\t\t\tid_ex_imm_data: %b\n", core.id_ex_imm_data);
+    $display("\t\t\t\t\t\tex_alu_oper2: %b\n", core.ex_alu_oper2);
+    $display("\t\t\t\t\t\tex_alu_oper1: %b\n", core.ex_alu_oper1);
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_imm_type: %b\n", core.id_ex_ctrl_sig_imm_type);
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_alu_fn: %b\n", core.id_ex_ctrl_sig_alu_fn);
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_alu_src2: %b\n", core.id_ex_ctrl_sig_alu_src2);
@@ -159,6 +161,7 @@ module TB_RISCV ( );
              "x24: %h\t\t\t\t", reg_file1.RF[24], "x25: %h\t\t\t\t", reg_file1.RF[25], "x26: %h\t\t\t\t", reg_file1.RF[26],
              "x27: %h\t\t\t\t", reg_file1.RF[27], "x28: %h\t\t\t\t", reg_file1.RF[28], "x29: %h\t\t\t\t", reg_file1.RF[29],
              "x30: %h\t\t\t\t", reg_file1.RF[30], "x31: %h\t\t\t\t", reg_file1.RF[31], "\n\n");
+
 
 
 	end

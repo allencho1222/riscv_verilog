@@ -11,6 +11,7 @@ module REG_FILE #(
     output wire [DWIDTH-1:0] RD1, RD2
 );
 
+    //integer i = 0;
     //Declare the register that will store the data
     reg [DWIDTH -1:0] RF [MDEPTH-1:0];
 
@@ -21,8 +22,12 @@ module REG_FILE #(
     initial
     begin
 	    RF[0] = {32{1'b0}};
+      //RF[1] = 32'b0;
       RF[2] = 32'b00000000_00000000_00001111_00000000;
       RF[3] = 32'b00000000_00000000_00000001_00000000;
+      //for (i = 4; i < 32; i++) begin
+        //RF[i] = 32'b0;
+      //end
     end
 
     //Define synchronous write
