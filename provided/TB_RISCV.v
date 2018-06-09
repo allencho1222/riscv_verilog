@@ -61,7 +61,7 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("/home/sungjun/riscv_verilog/testset/test2.txt"), //Initialize I-Memory
+		.ROMDATA ("/Users/sungjun/riscv_verilog/testset/test2.txt"), //Initialize I-Memory
 		.AWIDTH  (10),
 		.SIZE    (1024)	// it was .SIZE (1024)
 	) i_mem1 (
@@ -116,12 +116,12 @@ module TB_RISCV ( );
 			 "----- ID / EX pipeline registers -----\t\t\t\t",
 			 "----- EX / MEM pipeline registers -----\t\t\t\t",
 			 "----- MEM / WB pipeline registers -----\n");
-		$display("if_id_inst: %h\tdo_branch: %b\n", core.I_MEM_DI, core.id_do_branch);
+		$display("if_id_inst: %h\t\t\t\t\t\t\t\tdo_branch: %b\n", core.I_MEM_DI, core.id_do_branch);
 		$display("\t\t\t\t\t\t\t\t\tid_bypassed_rs1_data: %b", core.id_bypassed_rs1_data);
 		$display("\t\t\t\t\t\t\t\t\tid_bypassed_rs2_data: %b", core.id_bypassed_rs2_data);
-		$display("if_id_pc:   %b\tbranch_pc: %b\n", core.if_id_pc, core.id_branch_pc);
-		$display("\t\t\t\t\t\tid_ex_pc:  %b\n", core.id_ex_pc);
-		$display("\t\t\t\t\t\tid_ex_rd_addr: %b\t\t\t\t\t", core.id_ex_rd_addr,
+		$display("if_id_pc:   %b\t\tbranch_pc: %b\n", core.if_id_pc, core.id_branch_pc);
+		$display("\t\t\t\t\t\t\t\t\t\tid_ex_pc:  %b\n", core.id_ex_pc);
+		$display("\t\t\t\t\t\t\t\t\t\tid_ex_rd_addr: %b\t\t\t\t\t", core.id_ex_rd_addr,
 			 "ex_mem_rd_addr: %b\t\t\t\t\t", core.ex_mem_rd_addr,
 			 "mem_wb_rd_addr: %b\n", core.mem_wb_rd_addr);
 		$display("\t\t\t\t\t\tid_ex_rs1_addr: %b\n", core.id_ex_rs1_addr);
@@ -136,6 +136,11 @@ module TB_RISCV ( );
 		$display("\t\t\t\t\t\tid_ex_imm_data: %b\n", core.id_ex_imm_data);
     $display("\t\t\t\t\t\tex_alu_oper2: %b\n", core.ex_alu_oper2);
     $display("\t\t\t\t\t\tex_alu_oper1: %b\n", core.ex_alu_oper1);
+    $display("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tex_bypassed_rs1_data: %b\n", core.ex_bypassed_rs1_data);
+    $display("\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\tex_bypassed_rs2_data: %b\n", core.ex_bypassed_rs2_data);
+	$display("\t\t\t\t\t\t\treg_write_data: %b", core.reg_write_data);
+	$display("\t\t\t\t\t\t\tid_from_mem_wb_rs2: %b", core.id_from_mem_wb_rs2);
+	$display("\t\t\t\t\t\t\tid_from_mem_wb_rs1: %b", core.id_from_mem_wb_rs1);
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_imm_type: %b\n", core.id_ex_ctrl_sig_imm_type);
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_alu_fn: %b\n", core.id_ex_ctrl_sig_alu_fn);
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_alu_src2: %b\n", core.id_ex_ctrl_sig_alu_src2);
@@ -150,6 +155,16 @@ module TB_RISCV ( );
 		$display("\t\t\t\t\t\tid_ex_ctrl_sig_reg_write: %b\t\t\t\t", core.id_ex_ctrl_sig_reg_write,
 			 "ex_mem_ctrl_sig_reg_write: %b\t\t\t\t", core.ex_mem_ctrl_sig_reg_write,
 		 	 "mem_wb_ctrl_sig_reg_write: %b\n", core.mem_wb_ctrl_sig_reg_write);
+	$display("ex_from_exe_mem_rs2: %b", core.ex_from_exe_mem_rs2);
+	$display("ex_from_exe_mem_rs1: %b", core.ex_from_exe_mem_rs1);
+	$display("ex_from_mem_wb_rs2: %b", core.ex_from_mem_wb_rs2);
+	$display("ex_from_mem_wb_rs1: %b", core.ex_from_mem_wb_rs1);
+	$display("memory data in: %b ", core.D_MEM_DOUT, "memory data in addr: %b ", core.D_MEM_ADDR, "memory data write: %b ", core.D_MEM_WEN, "memory data ignore: %b", core.D_MEM_CSN);
+	$display("mem_is_load_store: %b\n", core.mem_is_load_store);
+	$display("mem_data_out_ext: %b\n", core.mem_data_out_ext);
+	$display("data read: %b\n", d_mem1.outline);
+	$display("stack: %b\n", d_mem1.ram[4096'hEFC]);
+
     $display("\n\nx0: %h\t\t\t\t", reg_file1.RF[0], "x1: %h\t\t\t\t", reg_file1.RF[1], "x2: %h\t\t\t\t", reg_file1.RF[2],
              "x3: %h\t\t\t\t", reg_file1.RF[3], "x4: %h\t\t\t\t", reg_file1.RF[4], "x5: %h\t\t\t\t", reg_file1.RF[5],
              "x6: %h\t\t\t\t", reg_file1.RF[6], "x7: %h\t\t\t\t", reg_file1.RF[7], "x8: %h\t\t\t\t", reg_file1.RF[8]);

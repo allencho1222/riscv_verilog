@@ -78,12 +78,12 @@ reg                           ex_mem_ctrl_sig_reg_write;
 
 // MEM / WB pipeline registers
 reg [(`REG_ADDR_LEN - 1):0] mem_wb_rd_addr;
-//reg [4:0]             mem_wb_rs1_addr;
-//reg [4:0]             mem_wb_rs2_addr;
 reg [(`DWIDTH - 1):0] mem_wb_alu_out;
 reg [(`DWIDTH - 1):0] mem_wb_mem_data_out;
+reg [(`MEM_TYPE_LEN - 1):0]	mem_wb_ctrl_sig_mem_type;
 reg [(`WB_FROM_LEN - 1):0]  mem_wb_ctrl_sig_wb_from;
 reg                         mem_wb_ctrl_sig_reg_write;
+reg							mem_wb_ctrl_sig_mem_rw;
 
 
 // ---------- instruction fetch stage ----------
@@ -216,21 +216,13 @@ assign id_do_branch    =  (ctrl_sig_br_type == `BR_EQ)   ? id_signed_rs1_data ==
 
 
 // hazard detection unit  --- needed for stall
-// TODO : can we bypass data in case of arith_br_stall? (currently
-// I implemented bypass version of arith_br_stall
 wire load_use_stall;    // stall 1 cycle
-//wire arith_br_stall;    // e.g.,) branch right after ADD, stall 1 cycle
-// TODO : can we reduce stall cycle of load_br_stall into 1 cycle?
 wire load_br_stall;     // stall 2 cycles
 assign load_use_stall = (id_ex_ctrl_sig_mem_rw == `M_R) &&   // check whether preceding is a load instruction
                         (id_ex_rd_addr == id_rs1_addr || ((id_ex_rd_addr == id_rs2_addr) && (ctrl_sig_mem_rw != `M_W)));   // ctrl_sig_mem_rw != M_W is for load-store 
-//assign arith_br_stall = (ctrl_sig_br_type != BR_X && ctrl_sig_br_type != BR_J) &&   // check whether it is a branch instrucdtion
-                        //(id_ex_ctrl_sig_reg_write == REG_W) && (id_ex_rd_addr != `REG_X0) && 
-                        //(id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
 assign load_br_stall  = (ctrl_sig_br_type != `BR_X && ctrl_sig_br_type != `BR_J) && 
                         (id_ex_ctrl_sig_mem_rw == `M_R) && 
                         (id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
-
 
 // bypassing logic for branch unit
 wire id_from_exe_mem_rs2, id_from_mem_wb_rs2;
@@ -255,38 +247,17 @@ assign id_from_exe_alu_out_rs1 =  (id_ex_ctrl_sig_reg_write == `REG_W) &&
 assign id_from_exe_alu_out_rs2 =  (id_ex_ctrl_sig_reg_write == `REG_W) &&
                                   (id_ex_rd_addr != `REG_X0) &&
                                   (id_ex_rd_addr == id_rs2_addr);
-assign id_bypassed_rs2_data = (id_from_exe_alu_out_rs2) ? ex_alu_out :
-                              (id_from_exe_mem_rs2) ?     ex_mem_alu_out :
-                              (id_from_mem_wb_rs2) ? reg_write_data : RF_RD2;
-assign id_bypassed_rs1_data = (id_from_exe_alu_out_rs1) ? ex_alu_out :
-                              (id_from_exe_mem_rs1) ?     ex_mem_alu_out :
-                              (id_from_mem_wb_rs1) ? reg_write_data : RF_RD1;
+assign id_bypassed_rs2_data = (id_from_exe_alu_out_rs2 === 1'b1) ? ex_alu_out :
+                              (id_from_exe_mem_rs2 === 1'b1) ?     ex_mem_alu_out :
+                              (id_from_mem_wb_rs2 === 1'b1) ? reg_write_data : RF_RD2;
+assign id_bypassed_rs1_data = (id_from_exe_alu_out_rs1 === 1'b1) ? ex_alu_out :
+                              (id_from_exe_mem_rs1 === 1'b1) ?     ex_mem_alu_out :
+                              (id_from_mem_wb_rs1 === 1'b1) ? reg_write_data : RF_RD1;
 
-wire [(`DWIDTH - 1) : 0] id_imm_data;
+wire [(`DWIDTH - 1) : 0] id_alu_oper2, id_alu_oper1;
+assign id_alu_oper2 = (id_from_mem_wb_rs2 === 1'b1) ? reg_write_data : RF_RD2;
+assign id_alu_oper1 = (id_from_mem_wb_rs1 === 1'b1) ? reg_write_data : RF_RD1;
 
-assign id_imm_data =
-    (ctrl_sig_imm_type == `IMM_I) ? sign_ext_imm_i :
-    (ctrl_sig_imm_type == `IMM_U) ? sign_ext_imm_u :
-    (ctrl_sig_imm_type == `IMM_S) ? sign_ext_imm_s :
-    (ctrl_sig_imm_type == `IMM_UJ)? sign_ext_imm_uj:
-    (ctrl_sig_imm_type == `IMM_SB)? sign_ext_imm_sb: {32{1'b0}};
-    /*
-    case (ctrl_sig_imm_type)
-      `IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
-      `IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
-      `IMM_S:    id_ex_imm_data <= sign_ext_imm_s;
-      `IMM_UJ:   id_ex_imm_data <= sign_ext_imm_uj;
-      `IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
-      default:  id_ex_imm_data <= {32{1'b0}};      // IMM_X
-    endcase
-    */
-wire [(`DWIDTH - 1):0] id_alu_oper2, id_alu_oper1;
-assign id_alu_oper2 = (id_ex_ctrl_sig_alu_src2 == `ALU2_RS2)  ? id_bypassed_rs2_data   : 
-                      (id_ex_ctrl_sig_alu_src2 == `ALU2_IMM)  ? id_imm_data : {32{1'b0}};
-
-assign id_alu_oper1 = (id_ex_ctrl_sig_alu_src1 == `ALU1_RS1)  ? id_bypassed_rs1_data   :
-                      (id_ex_ctrl_sig_alu_src1 == `ALU1_ZERO) ? {32{1'b0}}     : {32{1'b0}};
-                      
 // pipeline register operation
 always @(posedge CLK)
 begin
@@ -304,9 +275,11 @@ begin
     id_ex_rd_addr   <= id_rd_addr;
     id_ex_rs1_addr  <= id_rs1_addr;
     id_ex_rs2_addr  <= id_rs2_addr;
-    id_ex_alu_data1  <= id_alu_oper1;
-    id_ex_alu_data2  <= id_alu_oper2;
-    /*
+    //id_ex_alu_data1  <= id_alu_oper1;
+    //id_ex_alu_data2  <= id_alu_oper2;
+    id_ex_alu_data1 <= id_alu_oper1;
+    id_ex_alu_data2 <= id_alu_oper2;
+    
     case (ctrl_sig_imm_type)
       `IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
       `IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
@@ -315,8 +288,8 @@ begin
       `IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
       default:  id_ex_imm_data <= {32{1'b0}};      // IMM_X
     endcase
-    */
-    id_ex_mem_data            <= id_bypassed_rs2_data;
+   
+    //id_ex_mem_data            <= id_bypassed_rs2_data;
     id_ex_ctrl_sig_imm_type   <= ctrl_sig_imm_type;
     id_ex_ctrl_sig_alu_fn     <= ctrl_sig_alu_fn;
     id_ex_ctrl_sig_alu_src2   <= ctrl_sig_alu_src2;
@@ -331,46 +304,22 @@ end
 
 // ---------- execution stage ----------
 wire [(`DWIDTH - 1):0] ex_alu_out, ex_alu_oper2, ex_alu_oper1;
-//wire [(`DWIDTH - 1):0] ex_bypassed_rs2_data, ex_bypassed_rs1_data;    // bypassing will be considered
+wire [(`DWIDTH - 1):0] ex_bypassed_rs2_data, ex_bypassed_rs1_data;    // bypassing will be considered
+
 // bypassing logic wires
-//wire [(`DWIDTH - 1):0] from_alu_out_rs1, from_ex_mem_rs1, from_mem_wb_rs1;
-//wire [(`DWIDTH - 1):0] from_alu_out_rs2, from_ex_mem_rs2, from_mem_wb_rs2;
+assign ex_alu_oper2 = (id_ex_ctrl_sig_alu_src2 == `ALU2_RS2)  ? ex_bypassed_rs2_data   : 
+                      (id_ex_ctrl_sig_alu_src2 == `ALU2_IMM)  ? id_ex_imm_data : {32{1'b0}};
 
-
-// ex_rs2_data and ex_rs1_data are bypassed data
-// logic is described at below
-
+assign ex_alu_oper1 = (id_ex_ctrl_sig_alu_src1 == `ALU1_RS1)  ? ex_bypassed_rs1_data   :
+                      (id_ex_ctrl_sig_alu_src1 == `ALU1_ZERO) ? {32{1'b0}}     : {32{1'b0}};
 
 alu alu_operation (
-  .oper2(id_ex_alu_data2),
-  .oper1(id_ex_alu_data1),
+  .oper2(ex_alu_oper2),
+  .oper1(ex_alu_oper1),
   .alu_fn(id_ex_ctrl_sig_alu_fn),
   .alu_out(ex_alu_out)
 );
 
-
-// bypassing logic for ALU
-/*
-assign from_alu_out_rs1 = (id_ex_ctrl_sig_reg_write == `REG_W) &&
-                          (id_ex_rd_addr != `REG_X0) &&
-                          (id_rs1_addr == id_ex_rd_addr);
-assign from_alu_out_rs2 = (id_ex_ctrl_sig_reg_write == `REG_W) &&
-                          (id_ex_rd_addr != `REG_X0) &&
-                          (id_rs2_addr == id_ex_rd_addr);
-assign from_ex_mem_rs1  = (ex_mem_ctrl_sig_reg_write == `REG_W) &&
-                          (ex_mem_rd_addr != `REG_X0) &&
-                          (id_rs1_addr == ex_mem_rd_addr);
-assign from_ex_mem_rs2  = (ex_mem_ctrl_sig_reg_write == `REG_W) &&
-                          (ex_mem_rd_addr != `REG_X0) &&
-                          (id_rs2_addr == ex_mem_rd_addr);
-assign from_mem_wb_rs1  = (mem_wb_ctrl_sig_reg_write == `REG_W) &&
-                          (mem_wb_rd_addr != `REG_X0) &&
-                          (id_rs2_addr == mem_wb_rd_addr);
-assign from_mem_wb_rs2  = (mem_wb_ctrl_sig_reg_write == `REG_W) &&
-                          (mem_wb_rd_addr != `REG_X0) &&
-                          (id_rs2_addr == mem_wb_rd_addr);
-*/
-/*
 assign ex_from_exe_mem_rs2 =  (ex_mem_ctrl_sig_reg_write == `REG_W) && 
                               (ex_mem_rd_addr != `REG_X0) && 
                               (ex_mem_rd_addr == id_ex_rs2_addr);
@@ -383,22 +332,12 @@ assign ex_from_exe_mem_rs1 =  (ex_mem_ctrl_sig_reg_write == `REG_W) &&
 assign ex_from_mem_wb_rs1  =  (mem_wb_ctrl_sig_reg_write == `REG_W) && 
                               (mem_wb_rd_addr != `REG_X0) && 
                               (mem_wb_rd_addr == id_ex_rs1_addr);
-*/
+
 // TODO : do we need !ex_from_exe_mem_rs? (because forward_from_exe_mem_rs2 is considered before it)
-/*
-assign ex_bypassed_rs1_data = (from_alu_out_rs1)  ? ex_alu_out :
-                              (from_ex_mem_rs1)   ? ex_mem_alu_out :
-                              (from_mem_wb_rs1)   ? reg_write_data : RF_RD1; 
-assign ex_bypassed_rs2_data = (from_alu_out_rs2)  ? ex_alu_out :
-                              (from_ex_mem_rs2)   ? ex_mem_alu_out :
-                              (from_mem_wb_rs2)   ? reg_write_data : RF_RD2; 
-*/
-/*
-assign ex_bypassed_rs2_data = (ex_from_exe_mem_rs2) ? ex_mem_alu_out :
-                              (ex_from_mem_wb_rs2 && !ex_from_exe_mem_rs2) ? reg_write_data : id_ex_rs2_data;
-assign ex_bypassed_rs1_data = (ex_from_exe_mem_rs1) ? ex_mem_alu_out :
-                              (ex_from_mem_wb_rs1 && !ex_from_exe_mem_rs1) ? reg_write_data : id_ex_rs1_data;
-*/
+assign ex_bypassed_rs2_data = (ex_from_exe_mem_rs2 === 1'b1) ? ex_mem_alu_out :
+                              (ex_from_mem_wb_rs2 === 1'b1) ? reg_write_data : id_ex_alu_data2;
+assign ex_bypassed_rs1_data = (ex_from_exe_mem_rs1 === 1'b1) ? ex_mem_alu_out :
+                              (ex_from_mem_wb_rs1 === 1'b1) ? reg_write_data : id_ex_alu_data1;
 
 
 // pipeline register operation
@@ -407,7 +346,7 @@ begin
   //ex_mem_rs1_addr <= id_ex_rs1_addr;
   ex_mem_rs2_addr <= id_ex_rs2_addr;          // for load-store
   ex_mem_rd_addr  <= id_ex_rd_addr;
-  ex_mem_mem_data <= id_ex_mem_data;    // only for the store instruction (has to pass bypassed data becaused of arith-store)
+  ex_mem_mem_data <= ex_bypassed_rs2_data;    // only for the store instruction (has to pass bypassed data becaused of arith-store)
   ex_mem_alu_out  <= ex_alu_out;              // load, store => memory address, arithmetic => datum that goes into rd     
   ex_mem_ctrl_sig_mem_type  <= id_ex_ctrl_sig_mem_type;
   ex_mem_ctrl_sig_mem_rw    <= id_ex_ctrl_sig_mem_rw;
@@ -419,41 +358,42 @@ end
 // ---------- memory stage ----------
 wire mem_is_load_store;
 wire mem_write, mem_ignore;
-wire [(`MEM_TYPE_LEN - 1):0]  mem_type;
+wire [(`MEM_TYPE_LEN - 1):0]  store_mem_type, load_mem_type;
 wire [(`DWIDTH - 1):0] mem_addr;
 wire [(`DWIDTH - 1):0] mem_data_in;
 //wire [(`DWIDTH - 1):0] mem_data_out;
 wire [(`DWIDTH - 1):0] mem_data_out_ext;  // only for the load instruction
 assign mem_addr           = ex_mem_alu_out;
-assign mem_write          = (ex_mem_ctrl_sig_mem_rw == `M_W) ? 1'b0 : 1'b1; // 0: write, 1: read
-assign mem_ignore         = (ex_mem_ctrl_sig_mem_rw == `M_X) ? 1'b1 : 1'b0;    // 0: memory opeation occurs, 1: does not occur
-assign mem_type           = ex_mem_ctrl_sig_mem_type;
+assign mem_write          = (ex_mem_ctrl_sig_mem_rw === `M_W) ? 1'b0 : 1'b1; // 0: write, 1: read
+assign mem_ignore         = (ex_mem_ctrl_sig_mem_rw === `M_X) ? 1'b1 : 1'b0;    // 0: memory opeation occurs, 1: does not occur
+assign store_mem_type     = ex_mem_ctrl_sig_mem_type;
+assign load_mem_type      = mem_wb_ctrl_sig_mem_type;
+
 // TODO: I'm not sure load-store dependence is correctly handled. (bypassing logic)
-assign mem_is_load_store  = (mem_write == 1'b0 && (mem_wb_rd_addr == ex_mem_rs2_addr));
-assign mem_data_in        = (mem_is_load_store) ? mem_data_out_ext : ex_mem_mem_data;
+assign mem_is_load_store  = (mem_wb_ctrl_sig_mem_rw === `M_R && mem_write === 1'b0 && (mem_wb_rd_addr == ex_mem_rs2_addr));
+assign mem_data_in        = (mem_is_load_store === 1'b1) ? mem_data_out_ext : ex_mem_mem_data;
 // only for the load instruction
-assign mem_data_out_ext   = (mem_type == `MT_HU) ? {{(`DWIDTH - `HALF){1'b0}}, D_MEM_DI[(`HALF - 1):0]} :
-                            (mem_type == `MT_BU) ? {{(`DWIDTH - `BYTE){1'b0}}, D_MEM_DI[(`BYTE - 1):0]} :
-                            (mem_type == `MT_H)  ? {{(`DWIDTH - `HALF){D_MEM_DI[`HALF - 1]}}, D_MEM_DI[(`HALF - 1):0]} :
-                            (mem_type == `MT_B)  ? {{(`DWIDTH - `BYTE){D_MEM_DI[`BYTE - 1]}}, D_MEM_DI[(`BYTE - 1):0]} :
-                                                  {32{1'b0}};
+assign mem_data_out_ext   = (load_mem_type === `MT_HU) ? {{(`DWIDTH - `HALF){1'b0}}, D_MEM_DI[(`HALF - 1):0]} :
+                            (load_mem_type === `MT_BU) ? {{(`DWIDTH - `BYTE){1'b0}}, D_MEM_DI[(`BYTE - 1):0]} :
+                            (load_mem_type === `MT_H)  ? {{(`DWIDTH - `HALF){D_MEM_DI[`HALF - 1]}}, D_MEM_DI[(`HALF - 1):0]} :
+                            (load_mem_type === `MT_B)  ? {{(`DWIDTH - `BYTE){D_MEM_DI[`BYTE - 1]}}, D_MEM_DI[(`BYTE - 1):0]} :
+							(load_mem_type === `MT_W)  ? D_MEM_DI : {32{1'b0}};
 
 // interface between core and data memory
 assign D_MEM_CSN  = mem_ignore;
 assign D_MEM_DOUT = mem_data_in;
 assign D_MEM_ADDR = mem_addr;
 assign D_MEM_WEN  = mem_write;
-assign D_MEM_BE   = mem_type;
+assign D_MEM_BE   = store_mem_type;
 
 
 // pipeline register operation
 always @(posedge CLK)
 begin
-  //mem_wb_rs1_addr <= ex_mem_rs1_addr;
-  //mem_wb_rs2_addr <= ex_mem_rs2_addr;
   mem_wb_rd_addr <= ex_mem_rd_addr;
   mem_wb_alu_out <= ex_mem_alu_out;
-  //mem_wb_mem_data_out       <= mem_data_out_ext;
+  mem_wb_ctrl_sig_mem_rw <= ex_mem_ctrl_sig_mem_rw;
+  mem_wb_ctrl_sig_mem_type <= ex_mem_ctrl_sig_mem_type;
   mem_wb_ctrl_sig_wb_from   <= ex_mem_ctrl_sig_wb_from;
   mem_wb_ctrl_sig_reg_write <= ex_mem_ctrl_sig_reg_write; // will be used in register access operation
 end

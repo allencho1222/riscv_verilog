@@ -16,9 +16,6 @@ module SP_SRAM #(parameter ROMDATA = "", AWIDTH = 12, SIZE = 4096) (
 	begin
 		if (ROMDATA != "")
 			$readmemh(ROMDATA, ram);
-    $display ("im[0]: %b", ram[0]);
-    $display ("im[1]: %b", ram[1]);
-    $display ("im[2]: %b", ram[2]);
 	end
 	
 	assign #1 DOUT = outline;
