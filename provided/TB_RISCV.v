@@ -61,7 +61,7 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("/Users/sungjun/riscv_verilog/testset/test2.txt"), //Initialize I-Memory
+		.ROMDATA ("/home/sungjun/riscv_verilog/testset/test2.txt"), //Initialize I-Memory
 		.AWIDTH  (10),
 		.SIZE    (1024)	// it was .SIZE (1024)
 	) i_mem1 (

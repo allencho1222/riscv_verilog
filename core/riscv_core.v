@@ -4,6 +4,8 @@
 `include "../define/consts.v"
 
 module RISCV_TOP (
+  output [31:0] debug_if_id_inst,
+  output [31:0] debug_if_id_pc,
   // general signals
   input CLK,
   input RSTn,
@@ -30,12 +32,15 @@ module RISCV_TOP (
 );
 
 // ---------- pipeline registers ----------
+
+assign debug_if_id_inst = if_id_pc;
+assign debug_if_id_inst = I_MEM_DI;
 // pc register
 reg [(`DWIDTH - 1):0] pc;
 
 
 // IF / ID pipeline registers
-reg [(`IWIDTH - 1):0] if_id_inst;
+//reg [(`IWIDTH - 1):0] if_id_inst;
 reg [(`DWIDTH - 1):0] if_id_pc;
 
 // ID / EX pipeline registers
@@ -43,9 +48,10 @@ reg [(`DWIDTH - 1):0] id_ex_pc;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rd_addr;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rs1_addr;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rs2_addr;
-reg [(`DWIDTH - 1):0] id_ex_rs1_data;
-reg [(`DWIDTH - 1):0] id_ex_rs2_data;
+reg [(`DWIDTH - 1):0] id_ex_alu_data1;
+reg [(`DWIDTH - 1):0] id_ex_alu_data2;
 reg [(`DWIDTH - 1):0] id_ex_imm_data;
+reg [(`DWIDTH - 1):0] id_ex_mem_data;
 
 reg [(`IMM_TYPE_LEN - 1):0] id_ex_ctrl_sig_imm_type;
 reg [(`ALU_FN_LEN - 1):0]   id_ex_ctrl_sig_alu_fn;
@@ -105,7 +111,7 @@ always @(posedge CLK)
 begin
   if_id_pc <= pc;
   if ((load_br_stall === 1'b1) || ((id_do_branch === 1'b1) && !DE_OP_EN))
-    if_id_inst <= `BUBBLE;
+    TB_RISCV.i_mem1.outline <= `BUBBLE;
   //else if (!load_use_stall)
     //if_id_inst <= I_MEM_DI;
   //else
@@ -251,12 +257,36 @@ assign id_from_exe_alu_out_rs2 =  (id_ex_ctrl_sig_reg_write == `REG_W) &&
                                   (id_ex_rd_addr == id_rs2_addr);
 assign id_bypassed_rs2_data = (id_from_exe_alu_out_rs2) ? ex_alu_out :
                               (id_from_exe_mem_rs2) ?     ex_mem_alu_out :
-                              (id_from_mem_wb_rs2 && !id_from_exe_mem_rs2) ? reg_write_data : RF_RD2;
+                              (id_from_mem_wb_rs2) ? reg_write_data : RF_RD2;
 assign id_bypassed_rs1_data = (id_from_exe_alu_out_rs1) ? ex_alu_out :
                               (id_from_exe_mem_rs1) ?     ex_mem_alu_out :
-                              (id_from_mem_wb_rs1 && !id_from_exe_mem_rs1) ? reg_write_data : RF_RD1;
+                              (id_from_mem_wb_rs1) ? reg_write_data : RF_RD1;
 
+wire [(`DWIDTH - 1) : 0] id_imm_data;
 
+assign id_imm_data =
+    (ctrl_sig_imm_type == `IMM_I) ? sign_ext_imm_i :
+    (ctrl_sig_imm_type == `IMM_U) ? sign_ext_imm_u :
+    (ctrl_sig_imm_type == `IMM_S) ? sign_ext_imm_s :
+    (ctrl_sig_imm_type == `IMM_UJ)? sign_ext_imm_uj:
+    (ctrl_sig_imm_type == `IMM_SB)? sign_ext_imm_sb: {32{1'b0}};
+    /*
+    case (ctrl_sig_imm_type)
+      `IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
+      `IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
+      `IMM_S:    id_ex_imm_data <= sign_ext_imm_s;
+      `IMM_UJ:   id_ex_imm_data <= sign_ext_imm_uj;
+      `IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
+      default:  id_ex_imm_data <= {32{1'b0}};      // IMM_X
+    endcase
+    */
+wire [(`DWIDTH - 1):0] id_alu_oper2, id_alu_oper1;
+assign id_alu_oper2 = (id_ex_ctrl_sig_alu_src2 == `ALU2_RS2)  ? id_bypassed_rs2_data   : 
+                      (id_ex_ctrl_sig_alu_src2 == `ALU2_IMM)  ? id_imm_data : {32{1'b0}};
+
+assign id_alu_oper1 = (id_ex_ctrl_sig_alu_src1 == `ALU1_RS1)  ? id_bypassed_rs1_data   :
+                      (id_ex_ctrl_sig_alu_src1 == `ALU1_ZERO) ? {32{1'b0}}     : {32{1'b0}};
+                      
 // pipeline register operation
 always @(posedge CLK)
 begin
@@ -274,8 +304,9 @@ begin
     id_ex_rd_addr   <= id_rd_addr;
     id_ex_rs1_addr  <= id_rs1_addr;
     id_ex_rs2_addr  <= id_rs2_addr;
-    //id_ex_rs1_data  <= RF_RD1;
-    //id_ex_rs2_data  <= RF_RD2;
+    id_ex_alu_data1  <= id_alu_oper1;
+    id_ex_alu_data2  <= id_alu_oper2;
+    /*
     case (ctrl_sig_imm_type)
       `IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
       `IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
@@ -284,6 +315,8 @@ begin
       `IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
       default:  id_ex_imm_data <= {32{1'b0}};      // IMM_X
     endcase
+    */
+    id_ex_mem_data            <= id_bypassed_rs2_data;
     id_ex_ctrl_sig_imm_type   <= ctrl_sig_imm_type;
     id_ex_ctrl_sig_alu_fn     <= ctrl_sig_alu_fn;
     id_ex_ctrl_sig_alu_src2   <= ctrl_sig_alu_src2;
@@ -298,29 +331,26 @@ end
 
 // ---------- execution stage ----------
 wire [(`DWIDTH - 1):0] ex_alu_out, ex_alu_oper2, ex_alu_oper1;
-wire [(`DWIDTH - 1):0] ex_bypassed_rs2_data, ex_bypassed_rs1_data;    // bypassing will be considered
+//wire [(`DWIDTH - 1):0] ex_bypassed_rs2_data, ex_bypassed_rs1_data;    // bypassing will be considered
 // bypassing logic wires
-wire [(`DWIDTH - 1):0] from_alu_out_rs1, from_ex_mem_rs1, from_mem_wb_rs1;
-wire [(`DWIDTH - 1):0] from_alu_out_rs2, from_ex_mem_rs2, from_mem_wb_rs2;
+//wire [(`DWIDTH - 1):0] from_alu_out_rs1, from_ex_mem_rs1, from_mem_wb_rs1;
+//wire [(`DWIDTH - 1):0] from_alu_out_rs2, from_ex_mem_rs2, from_mem_wb_rs2;
 
 
 // ex_rs2_data and ex_rs1_data are bypassed data
 // logic is described at below
-assign ex_alu_oper2 = (id_ex_ctrl_sig_alu_src2 == `ALU2_RS2)  ? ex_bypassed_rs2_data   : 
-                      (id_ex_ctrl_sig_alu_src2 == `ALU2_IMM)  ? id_ex_imm_data : {32{1'b0}};
 
-assign ex_alu_oper1 = (id_ex_ctrl_sig_alu_src1 == `ALU1_RS1)  ? ex_bypassed_rs1_data   :
-                      (id_ex_ctrl_sig_alu_src1 == `ALU1_ZERO) ? {32{1'b0}}     : {32{1'b0}};
 
 alu alu_operation (
-  .oper2(ex_alu_oper2),
-  .oper1(ex_alu_oper1),
+  .oper2(id_ex_alu_data2),
+  .oper1(id_ex_alu_data1),
   .alu_fn(id_ex_ctrl_sig_alu_fn),
   .alu_out(ex_alu_out)
 );
 
 
 // bypassing logic for ALU
+/*
 assign from_alu_out_rs1 = (id_ex_ctrl_sig_reg_write == `REG_W) &&
                           (id_ex_rd_addr != `REG_X0) &&
                           (id_rs1_addr == id_ex_rd_addr);
@@ -339,7 +369,7 @@ assign from_mem_wb_rs1  = (mem_wb_ctrl_sig_reg_write == `REG_W) &&
 assign from_mem_wb_rs2  = (mem_wb_ctrl_sig_reg_write == `REG_W) &&
                           (mem_wb_rd_addr != `REG_X0) &&
                           (id_rs2_addr == mem_wb_rd_addr);
-
+*/
 /*
 assign ex_from_exe_mem_rs2 =  (ex_mem_ctrl_sig_reg_write == `REG_W) && 
                               (ex_mem_rd_addr != `REG_X0) && 
@@ -355,13 +385,14 @@ assign ex_from_mem_wb_rs1  =  (mem_wb_ctrl_sig_reg_write == `REG_W) &&
                               (mem_wb_rd_addr == id_ex_rs1_addr);
 */
 // TODO : do we need !ex_from_exe_mem_rs? (because forward_from_exe_mem_rs2 is considered before it)
-
+/*
 assign ex_bypassed_rs1_data = (from_alu_out_rs1)  ? ex_alu_out :
                               (from_ex_mem_rs1)   ? ex_mem_alu_out :
                               (from_mem_wb_rs1)   ? reg_write_data : RF_RD1; 
 assign ex_bypassed_rs2_data = (from_alu_out_rs2)  ? ex_alu_out :
                               (from_ex_mem_rs2)   ? ex_mem_alu_out :
                               (from_mem_wb_rs2)   ? reg_write_data : RF_RD2; 
+*/
 /*
 assign ex_bypassed_rs2_data = (ex_from_exe_mem_rs2) ? ex_mem_alu_out :
                               (ex_from_mem_wb_rs2 && !ex_from_exe_mem_rs2) ? reg_write_data : id_ex_rs2_data;
@@ -376,7 +407,7 @@ begin
   //ex_mem_rs1_addr <= id_ex_rs1_addr;
   ex_mem_rs2_addr <= id_ex_rs2_addr;          // for load-store
   ex_mem_rd_addr  <= id_ex_rd_addr;
-  ex_mem_mem_data <= ex_bypassed_rs2_data;    // only for the store instruction (has to pass bypassed data becaused of arith-store)
+  ex_mem_mem_data <= id_ex_mem_data;    // only for the store instruction (has to pass bypassed data becaused of arith-store)
   ex_mem_alu_out  <= ex_alu_out;              // load, store => memory address, arithmetic => datum that goes into rd     
   ex_mem_ctrl_sig_mem_type  <= id_ex_ctrl_sig_mem_type;
   ex_mem_ctrl_sig_mem_rw    <= id_ex_ctrl_sig_mem_rw;
