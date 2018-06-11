@@ -40,11 +40,11 @@ reg [(`DWIDTH - 1):0] pc;
 
 
 // IF / ID pipeline registers
-//reg [(`IWIDTH - 1):0] if_id_inst;
 reg [(`DWIDTH - 1):0] if_id_pc;
 
 // ID / EX pipeline registers
 reg [(`DWIDTH - 1):0] id_ex_pc;
+reg [(`DWIDTH - 1):0] id_ex_inst;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rd_addr;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rs1_addr;
 reg [(`REG_ADDR_LEN - 1):0] id_ex_rs2_addr;
@@ -69,6 +69,7 @@ reg [(`REG_ADDR_LEN - 1):0] ex_mem_rd_addr;
 reg [(`REG_ADDR_LEN - 1):0] ex_mem_rs2_addr;
 reg [(`DWIDTH - 1):0] ex_mem_mem_data;
 reg [(`DWIDTH - 1):0] ex_mem_alu_out;
+reg [(`DWIDTH - 1):0] ex_mem_inst;
 
 reg [(`MEM_TYPE_LEN - 1):0]   ex_mem_ctrl_sig_mem_type;
 reg [(`MEM_WRITE_LEN - 1):0]  ex_mem_ctrl_sig_mem_rw;
@@ -80,6 +81,7 @@ reg                           ex_mem_ctrl_sig_reg_write;
 reg [(`REG_ADDR_LEN - 1):0] mem_wb_rd_addr;
 reg [(`DWIDTH - 1):0] mem_wb_alu_out;
 reg [(`DWIDTH - 1):0] mem_wb_mem_data_out;
+reg [(`DWIDTH - 1):0] mem_wb_inst;
 reg [(`MEM_TYPE_LEN - 1):0]	mem_wb_ctrl_sig_mem_type;
 reg [(`WB_FROM_LEN - 1):0]  mem_wb_ctrl_sig_wb_from;
 reg                         mem_wb_ctrl_sig_reg_write;
@@ -87,10 +89,17 @@ reg							mem_wb_ctrl_sig_mem_rw;
 reg	[1:0]					mem_wb_mem_pos;
 
 
+reg [(`DWIDTH - 1):0] finish_sim;
+
+
 // ---------- instruction fetch stage ----------
 
 initial
 	pc = 32'b00000000_00000000_00000000_00000000;
+
+always @(posedge CLK)
+  if (finish_sim == 32'b00000000_00000000_10000000_01100111)
+	$finish;
 
 wire [(`DWIDTH - 1):0]  pc_plus_4;
 assign pc_plus_4 = pc + 4;
@@ -262,6 +271,7 @@ assign id_alu_oper1 = (id_from_mem_wb_rs1 === 1'b1) ? reg_write_data : RF_RD1;
 // pipeline register operation
 always @(posedge CLK)
 begin
+  id_ex_inst <= I_MEM_DI;
   id_ex_pc <= if_id_pc;
   if (load_use_stall) begin	// this includes load_br_stall
     id_ex_ctrl_sig_alu_fn     <= `ALU_X;
@@ -343,6 +353,7 @@ assign ex_bypassed_rs1_data = (ex_from_exe_mem_rs1 === 1'b1) ? ex_mem_alu_out :
 // pipeline register operation
 always @(posedge CLK)
 begin
+  ex_mem_inst	  <= id_ex_inst;
   //ex_mem_rs1_addr <= id_ex_rs1_addr;
   ex_mem_rs2_addr <= id_ex_rs2_addr;          // for load-store
   ex_mem_rd_addr  <= id_ex_rd_addr;
@@ -422,6 +433,7 @@ assign D_MEM_DOUT 	=	(store_mem_type === `MT_B && mem_addr[1:0] == 2'b00) ? mem_
 // pipeline register operation
 always @(posedge CLK)
 begin
+  mem_wb_inst    <= ex_mem_inst;
   mem_wb_mem_pos <= mem_addr[1:0];
   mem_wb_rd_addr <= ex_mem_rd_addr;
   mem_wb_alu_out <= ex_mem_alu_out;
@@ -438,5 +450,8 @@ assign reg_write_addr = mem_wb_rd_addr;
 assign reg_write_data = (mem_wb_ctrl_sig_wb_from == `FROM_ALU) ? mem_wb_alu_out :
                         (mem_wb_ctrl_sig_wb_from == `FROM_MEM) ? mem_data_out_ext :
                         (mem_wb_ctrl_sig_wb_from == `FROM_PC)  ? pc_plus_4 : {32{1'b0}};
+
+always @(posedge CLK)
+  finish_sim <= mem_wb_inst;
 
 endmodule
