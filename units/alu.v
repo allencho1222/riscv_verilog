@@ -6,7 +6,7 @@ module alu (
   input       [(`DWIDTH - 1):0] oper2,
   input       [(`DWIDTH - 1):0] oper1,
   input       [(`ALU_FN_LEN - 1):0]  alu_fn,
-  output      [(`DWIDTH - 1):0] alu_out
+  output reg  [(`DWIDTH - 1):0] alu_out
 );
 
 // for signed operation of SLT and SGE
@@ -18,8 +18,9 @@ assign signed_oper1 = oper1;
 wire [4:0] shamt;
 assign shamt = oper2[4:0];
 
-//always @(*)
-//begin
+always @(*)
+begin
+/*
   assign alu_out = 
     (alu_fn == `ALU_ADD) ? oper1 + oper2 :
     (alu_fn == `ALU_SUB) ? oper1 - oper2 :
@@ -31,7 +32,7 @@ assign shamt = oper2[4:0];
     (alu_fn == `ALU_SL)  ? oper1 << shamt :
     (alu_fn == `ALU_SR)  ? oper1 >> shamt :
     (alu_fn == `ALU_SRA) ? signed_oper1 >>> shamt : oper1 + oper2;
-    /*
+*/
   case (alu_fn)
     `ALU_ADD:  alu_out = oper1 + oper2;
     `ALU_SUB:  alu_out = oper1 - oper2;
@@ -42,10 +43,9 @@ assign shamt = oper2[4:0];
     `ALU_XOR:  alu_out = oper1 ^ oper2;
     `ALU_SL:   alu_out = oper1 << shamt;
     `ALU_SR:   alu_out = oper1 >> shamt;
-    `ALU_SRA:  alu_out = oper1 >>> shamt;
+    `ALU_SRA:  alu_out = signed_oper1 >>> shamt;
     default:  alu_out = oper1 + oper2;
   endcase
-  */
-//end
+end
 
 endmodule
