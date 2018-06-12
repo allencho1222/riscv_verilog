@@ -63,7 +63,7 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("/home/changsu/lecture_2017/Advanced_archi/LAB2/riscv_verilog/testset/test3.txt"), //Initialize I-Memory
+		.ROMDATA ("/Users/sungjun/riscv_verilog/testset/test2.txt"), //Initialize I-Memory
 		.AWIDTH  (10),
 		.SIZE    (1024)	// it was .SIZE (1024)
 	) i_mem1 (
@@ -168,7 +168,9 @@ module TB_RISCV ( );
 	$display("mem_data_out_ext: %b\n", core.mem_data_out_ext);
 	$display("data read: %b\n", d_mem1.outline);
 	$display("stack: %b\n", d_mem1.ram[4096'hF00]);
-	//$display("mem_wb_pc: %b\n", core.mem_wb_pc);
+	$display("mem_stall: %b\n", core.mem_stall);
+	$display("d_mem1.count: %b\n", d_mem1.count);
+	$display("mem_ready: %b\n", d_mem1.READY);
 
     $display("\n\nx0: %h\t\t\t\t", reg_file1.RF[0], "x1: %h\t\t\t\t", reg_file1.RF[1], "x2: %h\t\t\t\t", reg_file1.RF[2],
              "x3: %h\t\t\t\t", reg_file1.RF[3], "x4: %h\t\t\t\t", reg_file1.RF[4], "x5: %h\t\t\t\t", reg_file1.RF[5],

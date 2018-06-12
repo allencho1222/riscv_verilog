@@ -62,6 +62,7 @@ module SP_SRAM_LATENCY #(parameter ROMDATA = "", AWIDTH = 12, SIZE = 4096) (
 
 	initial	
 	begin
+		count <= 0;
 		if (ROMDATA != "")
 			$readmemh(ROMDATA, ram);
 	end
