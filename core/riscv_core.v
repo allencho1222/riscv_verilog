@@ -16,6 +16,7 @@ module RISCV_TOP (
   // Data memory signals
   output D_MEM_CSN,                     // no data memory operation
   input [(`DWIDTH - 1):0] D_MEM_DI,     // core will receive data from this wire
+	input D_READY,
   output [(`DWIDTH - 1):0] D_MEM_DOUT,  // core will send data to be written
   output [(`DWIDTH - 1):0] D_MEM_ADDR,  // core will send address of data memory
   output D_MEM_WEN,                     // core will send the write enable signal
@@ -112,7 +113,9 @@ begin
     pc <= id_branch_pc;
   else if (load_use_stall === 1'b1)
     pc <= pc;
-  else
+  else if (mem_stall == 1'b1)
+		pc <= pc;
+	else
     pc <= pc_plus_4;
 end
 
@@ -228,11 +231,13 @@ assign id_do_branch    =  (ctrl_sig_br_type == `BR_EQ)   ? id_signed_rs1_data ==
 // hazard detection unit  --- needed for stall
 wire load_use_stall;    // stall 1 cycle
 wire load_br_stall;     // stall 2 cycles
+wire mem_stall; // memory ready
 assign load_use_stall = (id_ex_ctrl_sig_mem_rw == `M_R) &&   // check whether preceding is a load instruction
                         (id_ex_rd_addr == id_rs1_addr || ((id_ex_rd_addr == id_rs2_addr) && (ctrl_sig_mem_rw != `M_W)));   // ctrl_sig_mem_rw != M_W is for load-store 
 assign load_br_stall  = (ctrl_sig_br_type != `BR_X && ctrl_sig_br_type != `BR_J) && 
                         (id_ex_ctrl_sig_mem_rw == `M_R) && 
                         (id_ex_rd_addr == id_rs1_addr || id_ex_rd_addr == id_rs2_addr);
+assign mem_stall = (mem_ignore == 1'b0) && (mem_ready == 1'b0);
 
 // bypassing logic for branch unit
 wire id_from_exe_mem_rs2, id_from_mem_wb_rs2;
@@ -273,7 +278,7 @@ always @(posedge CLK)
 begin
   id_ex_inst <= I_MEM_DI;
   id_ex_pc <= if_id_pc;
-  if (load_use_stall) begin	// this includes load_br_stall
+  if (load_use_stall || mem_stall) begin	// this includes load_br_stall
     id_ex_ctrl_sig_alu_fn     <= `ALU_X;
     id_ex_ctrl_sig_alu_src2   <= `ALU2_X;
     id_ex_ctrl_sig_alu_src1   <= `ALU1_X;
@@ -353,22 +358,27 @@ assign ex_bypassed_rs1_data = (ex_from_exe_mem_rs1 === 1'b1) ? ex_mem_alu_out :
 // pipeline register operation
 always @(posedge CLK)
 begin
-  ex_mem_inst	  <= id_ex_inst;
-  //ex_mem_rs1_addr <= id_ex_rs1_addr;
-  ex_mem_rs2_addr <= id_ex_rs2_addr;          // for load-store
-  ex_mem_rd_addr  <= id_ex_rd_addr;
-  ex_mem_mem_data <= ex_bypassed_rs2_data;    // only for the store instruction (has to pass bypassed data becaused of arith-store)
-  ex_mem_alu_out  <= ex_alu_out;              // load, store => memory address, arithmetic => datum that goes into rd     
-  ex_mem_ctrl_sig_mem_type  <= id_ex_ctrl_sig_mem_type;
-  ex_mem_ctrl_sig_mem_rw    <= id_ex_ctrl_sig_mem_rw;
-  ex_mem_ctrl_sig_wb_from   <= id_ex_ctrl_sig_wb_from;
-  ex_mem_ctrl_sig_reg_write <= id_ex_ctrl_sig_reg_write;
+	if (mem_stall) begin
+		
+	end
+	else begin
+	  ex_mem_inst	  <= id_ex_inst;
+	  //ex_mem_rs1_addr <= id_ex_rs1_addr;
+		ex_mem_rs2_addr <= id_ex_rs2_addr;          // for load-store
+		ex_mem_rd_addr  <= id_ex_rd_addr;
+	  ex_mem_mem_data <= ex_bypassed_rs2_data;    // only for the store instruction (has to pass bypassed data becaused of arith-store)
+	  ex_mem_alu_out  <= ex_alu_out;              // load, store => memory address, arithmetic => datum that goes into rd     
+	  ex_mem_ctrl_sig_mem_type  <= id_ex_ctrl_sig_mem_type;
+	  ex_mem_ctrl_sig_mem_rw    <= id_ex_ctrl_sig_mem_rw;
+	  ex_mem_ctrl_sig_wb_from   <= id_ex_ctrl_sig_wb_from;
+	  ex_mem_ctrl_sig_reg_write <= id_ex_ctrl_sig_reg_write;
+	end
 end
 
 
 // ---------- memory stage ----------
 wire mem_is_load_store;
-wire mem_write, mem_ignore;
+wire mem_write, mem_ignore, mem_ready;
 wire [(`MEM_TYPE_LEN - 1):0]  store_mem_type, load_mem_type;
 wire [(`DWIDTH - 1):0] mem_addr;
 wire [(`DWIDTH - 1):0] mem_data_in;
@@ -410,6 +420,7 @@ assign mem_data_out_ext   = (load_mem_type === `MT_HU) ? {{(`DWIDTH - `HALF){1'b
 // interface between core and data memory
 assign D_MEM_CSN  = mem_ignore;
 //assign D_MEM_DOUT = mem_data_in;
+assign mem_ready = D_READY;
 assign D_MEM_ADDR = mem_addr;
 assign D_MEM_WEN  = mem_write;
 //assign D_MEM_BE   	=	store_mem_type;
