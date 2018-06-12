@@ -61,7 +61,7 @@ reg [(`ALU_SRC_LEN - 1):0]  id_ex_ctrl_sig_alu_src2, id_ex_ctrl_sig_alu_src1;
 reg [(`MEM_TYPE_LEN - 1):0]   id_ex_ctrl_sig_mem_type;
 reg [(`MEM_WRITE_LEN - 1):0]  id_ex_ctrl_sig_mem_rw;
 reg [(`WB_FROM_LEN - 1):0]    id_ex_ctrl_sig_wb_from;
-
+reg [(`BR_TYPE_LEN - 1):0]    id_ex_ctrl_sig_br_type;
 reg                           id_ex_ctrl_sig_reg_write;
 
 
@@ -75,7 +75,7 @@ reg [(`DWIDTH - 1):0] ex_mem_inst;
 reg [(`MEM_TYPE_LEN - 1):0]   ex_mem_ctrl_sig_mem_type;
 reg [(`MEM_WRITE_LEN - 1):0]  ex_mem_ctrl_sig_mem_rw;
 reg [(`WB_FROM_LEN - 1):0]    ex_mem_ctrl_sig_wb_from;
-
+reg [(`BR_TYPE_LEN - 1):0]    ex_mem_ctrl_sig_br_type;
 reg                           ex_mem_ctrl_sig_reg_write;
 
 // MEM / WB pipeline registers
@@ -95,9 +95,47 @@ reg [(`DWIDTH - 1):0] finish_sim;
 
 // ---------- instruction fetch stage ----------
 
-initial
+initial begin
 	pc = 32'b00000000_00000000_00000000_00000000;
-
+/*
+	if_id_pc = 0; 
+	id_ex_pc = 0;
+	id_ex_inst = 0;
+	id_ex_rd_addr = 0;
+	id_ex_rs1_addr = 0;
+	id_ex_rs2_addr = 0;
+	id_ex_alu_data1 = 0;
+	id_ex_alu_data2 = 0;
+	id_ex_imm_data = 0;
+	id_ex_mem_data = 0;
+	id_ex_ctrl_sig_imm_type = 0;
+	id_ex_ctrl_sig_alu_fn = 0;
+	id_ex_ctrl_sig_alu_src2 = 0;
+	id_ex_ctrl_sig_alu_src1 = 0;
+	id_ex_ctrl_sig_mem_type = 0;
+	id_ex_ctrl_sig_wb_from = 0;
+	id_ex_ctrl_sig_br_type = 0;
+	id_ex_ctrl_reg_write = 0;
+	ex_mem_rd_addr = 0;
+	ex_mem_rs2_addr = 0;
+	ex_mem_mem_data = 0;
+	ex_mem_alu_out = 0;
+	ex_mem_inst = 0;
+	ex_mem_ctrl_sig_mem_tyep = 0;
+	ex_mem_ctrl_sig_mem_rw = 0;
+	ex_mem_ctrl_sig_wb_from = 0;
+	ex_mem_ctrl_sig_br_type = 0;
+	ex_mem_ctrl_sig_reg_write = 0;
+	mem_wb_rd_addr = 0;
+	mem_wb_alu_out = 0;
+	mem_wb_mem_data_out = 0;
+	mem_wb_inst = 0;
+	mem_wb_ctrl_sig_mem_type = 0;
+	mem_wb_ctrl_sig_wb_from = 0;
+	mem_wb_ctrl_sig_reg_write = 0;
+	mem_wb_ctrl_sig_mem_rw = 0;
+	mem_wb_mem_pos = 0;
+*/
 always @(posedge CLK)
   if (finish_sim === 32'b00000000_00000000_10000000_01100111)
 	$finish;
@@ -107,25 +145,47 @@ assign pc_plus_4 = pc + 4;
 
 always @(posedge CLK)
 begin
-  if (load_br_stall === 1'b1)
+  if (mem_stall === 1'b1 || load_br_stall === 1'b1 || load_br_stall === 1'b1 || load_br_stall2 === 1'b1) begin
+	pc <= pc;
+  end
+  else begin
+	if (id_do_branch)
+		pc <= id_branch_pc;
+	else
+		pc <= pc_plus_4;
+  end
+/*
+  if (mem_stall === 1'b1)
+	pc <= pc;
+  else if (load_br_stall === 1'b1)
     pc <= if_id_pc;
   else if (id_do_branch === 1'b1)
     pc <= id_branch_pc;
   else if (load_use_stall === 1'b1)
     pc <= pc;
-  else if (mem_stall === 1'b1)
-	pc <= pc;
+  //else if (mem_stall === 1'b1)
+	//pc <= pc;
   else
     pc <= pc_plus_4;
+*/
 end
 
 // TODO: how to deal with 2 stall cycles?
 always @(posedge CLK)
 begin
-  if ( mem_stall === 1'b0 )
-  	if_id_pc <= pc;
-  if ((load_br_stall === 1'b1) || ((id_do_branch === 1'b1) && !DE_OP_EN))
+  if (mem_stall === 1'b1 || load_use_stall === 1'b1 || load_br_stall === 1'b1 || load_br_stall2 === 1'b1)
+	if_id_pc <= if_id_pc;
+  //else if ((load_br_stall === 1'b1) || ((id_do_branch === 1'b1) && !DE_OP_EN)) begin
+	//if_id_pc <= 32'b0;
+    //TB_RISCV.i_mem1.outline <= `BUBBLE;
+  else if (id_do_branch === 1'b1 && !DE_OP_EN) begin
+	if_id_pc <= 32'b0;
     TB_RISCV.i_mem1.outline <= `BUBBLE;
+  end
+  else
+  	if_id_pc <= pc;
+  //else
+	//if_id_pc <= pc;
   //else if (!load_use_stall)
     //if_id_inst <= I_MEM_DI;
   //else
@@ -134,7 +194,7 @@ end
 
 // interface between core and instruction memory
 assign I_MEM_ADDR = pc;
-assign I_MEM_CSN = (load_use_stall === 1'b1 || mem_stall === 1'b1) ? 1'b1 : 1'b0;
+assign I_MEM_CSN = (load_use_stall === 1'b1 || mem_stall === 1'b1 || load_br_stall === 1'b1 || load_br_stall2 === 1'b1) ? 1'b1 : 1'b0;
 
 
 
@@ -238,6 +298,9 @@ assign load_use_stall = (id_ex_ctrl_sig_mem_rw === `M_R) &&   // check whether p
 assign load_br_stall  = (ctrl_sig_br_type != `BR_X && ctrl_sig_br_type != `BR_J) && 
                         (id_ex_ctrl_sig_mem_rw === `M_R) && 
                         (id_ex_rd_addr === id_rs1_addr || id_ex_rd_addr === id_rs2_addr);
+assign load_br_stall2 = (ctrl_sig_br_type != `BR_X && ctrl_sig_br_type != `BR_J) &&
+						(ex_mem_ctrl_sig_mem_rw === `M_R) &&
+						(ex_mem_rd_addr === id_rs1_addr || ex_mem_rd_addr === id_rs2_addr);
 assign mem_stall = (mem_ignore === 1'b0) && (mem_ready === 1'b0);
 
 // bypassing logic for branch unit
@@ -279,17 +342,56 @@ always @(posedge CLK)
 begin
   //id_ex_inst <= I_MEM_DI;
   //id_ex_pc <= if_id_pc;
-  if (load_use_stall === 1'b1) begin	// this includes load_br_stall
+  if (mem_stall === 1'b1) begin
+
+  end
+  else if (load_use_stall === 1'b1 || load_br_stall === 1'b1 || load_br_stall2 === 1'b1) begin	// this includes !load_br_stall
 	id_ex_pc				  <= 32'b0;
 	id_ex_inst				  <= 32'b0;
+	id_ex_rd_addr			  <= 5'b0;
+	id_ex_rs1_addr			  <= 5'b0;
+	id_ex_rs2_addr			  <= 5'b0;
+    id_ex_alu_data1 		  <= 32'b0;
+    id_ex_alu_data2 		  <= 32'b0;
     id_ex_ctrl_sig_alu_fn     <= `ALU_X;
     id_ex_ctrl_sig_alu_src2   <= `ALU2_X;
     id_ex_ctrl_sig_alu_src1   <= `ALU1_X;
     id_ex_ctrl_sig_mem_type   <= `MT_X;
+	id_ex_ctrl_sig_br_type	  <= `BR_X;
     id_ex_ctrl_sig_mem_rw     <= `M_X;
     id_ex_ctrl_sig_wb_from    <= `FROM_X;
     id_ex_ctrl_sig_reg_write  <= `REG_X;
   end
+  else begin	// this includes load_br_stall
+	id_ex_inst 		<= I_MEM_DI;
+	id_ex_pc		<= if_id_pc;
+    id_ex_rd_addr   <= id_rd_addr;
+    id_ex_rs1_addr  <= id_rs1_addr;
+    id_ex_rs2_addr  <= id_rs2_addr;
+    //id_ex_alu_data1  <= id_alu_oper1;
+    //id_ex_alu_data2  <= id_alu_oper2;
+    id_ex_alu_data1 <= id_alu_oper1;
+    id_ex_alu_data2 <= id_alu_oper2;
+    
+    case (ctrl_sig_imm_type)
+      `IMM_I:    id_ex_imm_data <= sign_ext_imm_i;
+      `IMM_U:    id_ex_imm_data <= sign_ext_imm_u;
+      `IMM_S:    id_ex_imm_data <= sign_ext_imm_s;
+      `IMM_UJ:   id_ex_imm_data <= sign_ext_imm_uj;
+      `IMM_SB:   id_ex_imm_data <= sign_ext_imm_sb;
+      default:  id_ex_imm_data <= {32{1'b0}};      // IMM_X
+    endcase //id_ex_mem_data            <= id_bypassed_rs2_data;
+    id_ex_ctrl_sig_imm_type   <= ctrl_sig_imm_type;
+    id_ex_ctrl_sig_alu_fn     <= ctrl_sig_alu_fn;
+    id_ex_ctrl_sig_alu_src2   <= ctrl_sig_alu_src2;
+    id_ex_ctrl_sig_alu_src1   <= ctrl_sig_alu_src1;
+    id_ex_ctrl_sig_mem_type   <= ctrl_sig_mem_type;
+	id_ex_ctrl_sig_br_type	  <= ctrl_sig_br_type;
+    id_ex_ctrl_sig_mem_rw     <= ctrl_sig_mem_rw;
+    id_ex_ctrl_sig_wb_from    <= ctrl_sig_wb_from;
+    id_ex_ctrl_sig_reg_write  <= ctrl_sig_reg_write;
+  end
+/*
   else if (mem_stall != 1'b1) begin	// this includes !load_br_stall
 	id_ex_inst 		<= I_MEM_DI;
 	id_ex_pc		<= if_id_pc;
@@ -318,6 +420,7 @@ begin
     id_ex_ctrl_sig_wb_from    <= ctrl_sig_wb_from;
     id_ex_ctrl_sig_reg_write  <= ctrl_sig_reg_write;
   end
+*/
 end
   
 
@@ -374,6 +477,7 @@ begin
 	  ex_mem_ctrl_sig_mem_rw    <= id_ex_ctrl_sig_mem_rw;
 	  ex_mem_ctrl_sig_wb_from   <= id_ex_ctrl_sig_wb_from;
 	  ex_mem_ctrl_sig_reg_write <= id_ex_ctrl_sig_reg_write;
+	  ex_mem_ctrl_sig_br_type	<= id_ex_ctrl_sig_br_type;
 	end
 end
 
@@ -446,6 +550,9 @@ assign D_MEM_DOUT 	=	(store_mem_type === `MT_B && mem_addr[1:0] === 2'b00) ? mem
 // pipeline register operation
 always @(posedge CLK)
 begin
+  if (mem_stall === 1'b1) begin
+  end
+  else begin
   mem_wb_inst    <= ex_mem_inst;
   mem_wb_mem_pos <= mem_addr[1:0];
   mem_wb_rd_addr <= ex_mem_rd_addr;
@@ -454,6 +561,7 @@ begin
   mem_wb_ctrl_sig_mem_type <= ex_mem_ctrl_sig_mem_type;
   mem_wb_ctrl_sig_wb_from   <= ex_mem_ctrl_sig_wb_from;
   mem_wb_ctrl_sig_reg_write <= ex_mem_ctrl_sig_reg_write; // will be used in register access operation
+  end
 end
 
 
