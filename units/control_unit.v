@@ -16,6 +16,18 @@ module control_unit (
   output reg [(`BR_TYPE_LEN - 1):0]  branch_type
 );
 
+initial begin
+	alu_fn = 0;
+	memory_type = 0;
+	memory_rw = 0;
+	register_write = 0;
+	writeback_from = 0;
+	imm_type = 0;
+	alu_src2 = 0;
+	alu_src1 = 0;
+	branch_type = 0;
+end
+
 always @(instruction)
 begin
   casex (instruction)

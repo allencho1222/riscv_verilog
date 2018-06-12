@@ -9,6 +9,9 @@ module alu (
   output reg  [(`DWIDTH - 1):0] alu_out
 );
 
+initial begin
+	alu_out = 0;
+end
 // for signed operation of SLT and SGE
 wire signed [(`DWIDTH - 1):0] signed_oper2, signed_oper1;
 assign signed_oper2 = oper2;

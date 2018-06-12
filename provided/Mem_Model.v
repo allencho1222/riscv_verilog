@@ -16,6 +16,7 @@ module SP_SRAM #(parameter ROMDATA = "", AWIDTH = 12, SIZE = 4096) (
 	begin
 		if (ROMDATA != "")
 			$readmemh(ROMDATA, ram);
+		outline = 0;
 	end
 	
 	assign #1 DOUT = outline;
@@ -62,6 +63,7 @@ module SP_SRAM_LATENCY #(parameter ROMDATA = "", AWIDTH = 12, SIZE = 4096) (
 
 	initial	
 	begin
+		outline = 0;
 		count <= 0;
 		if (ROMDATA != "")
 			$readmemh(ROMDATA, ram);

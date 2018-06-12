@@ -48,7 +48,7 @@ module TB_RISCV ( );
 		.D_MEM_ADDR   (D_MEM_ADDR),
 		.D_MEM_WEN    (D_MEM_WEN),
 		.D_MEM_BE     (D_MEM_BE),
-		.D_READY 			(D_READY), // data memory latency mode
+		.D_READY 	  (D_READY), // data memory latency mode
 		//RegFile Signals
 		.RF_WE        (RF_WE),
 		.RF_RA1       (RF_RA1),
@@ -88,7 +88,7 @@ module TB_RISCV ( );
 		.WEN    (D_MEM_WEN),
 		.BE     (D_MEM_BE[3:0]),   // truncate bits into [3:0] since [4] does not need anymore in this module
 		.READY  (D_READY),
-		.LATENCY (3'd1)
+		.LATENCY (3'd1)				// Latency == 1 -> default latency.
 	);
 
 	//Reg File
@@ -114,6 +114,7 @@ module TB_RISCV ( );
 	end
 	always @(posedge CLK)
 	begin
+/*
 		// print debugging information
 		$display("current pc: %b\n", core.pc);
 		$display("----- IF / ID pipeline registers -----\t\t\t\t",
@@ -186,10 +187,6 @@ module TB_RISCV ( );
              "x24: %h\t\t\t\t", reg_file1.RF[24], "x25: %h\t\t\t\t", reg_file1.RF[25], "x26: %h\t\t\t\t", reg_file1.RF[26],
              "x27: %h\t\t\t\t", reg_file1.RF[27], "x28: %h\t\t\t\t", reg_file1.RF[28], "x29: %h\t\t\t\t", reg_file1.RF[29],
              "x30: %h\t\t\t\t", reg_file1.RF[30], "x31: %h\t\t\t\t", reg_file1.RF[31], "\n\n");
-
-
-
+*/
 	end
-
-
 endmodule
