@@ -18,6 +18,7 @@ module TB_RISCV ( );
 	wire    [31:0]  D_MEM_DOUT;
 	wire    [31:0]  D_MEM_ADDR;
 	wire    [31:0]  D_MEM_DI;
+	wire 						D_READY; // data ready sig , 1 : ready, 0 : wait
 	wire            RF_WE;
 	wire    [4:0]   RF_RA1;
 	wire    [4:0]   RF_RA2;
@@ -47,6 +48,7 @@ module TB_RISCV ( );
 		.D_MEM_ADDR   (D_MEM_ADDR),
 		.D_MEM_WEN    (D_MEM_WEN),
 		.D_MEM_BE     (D_MEM_BE),
+		.D_READY 			(D_READY), // data memory latency mode
 		//RegFile Signals
 		.RF_WE        (RF_WE),
 		.RF_RA1       (RF_RA1),
@@ -61,7 +63,7 @@ module TB_RISCV ( );
 
 	//I-Memory
 	SP_SRAM #(
-		.ROMDATA ("/Users/sungjun/riscv_verilog/testset/test3.txt"), //Initialize I-Memory
+		.ROMDATA ("/home/changsu/lecture_2017/Advanced_archi/LAB2/riscv_verilog/testset/test3.txt"), //Initialize I-Memory
 		.AWIDTH  (10),
 		.SIZE    (1024)	// it was .SIZE (1024)
 	) i_mem1 (
@@ -74,7 +76,7 @@ module TB_RISCV ( );
 	);
 
 	//D-Memory
-	SP_SRAM #(
+	SP_SRAM_LATENCY #(
 		.AWIDTH  (12),
 		.SIZE    (4096)
 	) d_mem1 (
@@ -84,7 +86,9 @@ module TB_RISCV ( );
 		.DOUT   (D_MEM_DOUT),
 		.ADDR   (D_MEM_ADDR[13:2]),
 		.WEN    (D_MEM_WEN),
-		.BE     (D_MEM_BE[3:0])   // truncate bits into [3:0] since [4] does not need anymore in this module
+		.BE     (D_MEM_BE[3:0]),   // truncate bits into [3:0] since [4] does not need anymore in this module
+		.READY  (D_READY),
+		.LATENCY (3'd2)
 	);
 
 	//Reg File
