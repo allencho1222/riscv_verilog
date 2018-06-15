@@ -114,7 +114,6 @@ module TB_RISCV ( );
 	end
 	always @(posedge CLK)
 	begin
-/*
 		// print debugging information
 		$display("current pc: %b\n", core.pc);
 		$display("----- IF / ID pipeline registers -----\t\t\t\t",
@@ -187,6 +186,5 @@ module TB_RISCV ( );
              "x24: %h\t\t\t\t", reg_file1.RF[24], "x25: %h\t\t\t\t", reg_file1.RF[25], "x26: %h\t\t\t\t", reg_file1.RF[26],
              "x27: %h\t\t\t\t", reg_file1.RF[27], "x28: %h\t\t\t\t", reg_file1.RF[28], "x29: %h\t\t\t\t", reg_file1.RF[29],
              "x30: %h\t\t\t\t", reg_file1.RF[30], "x31: %h\t\t\t\t", reg_file1.RF[31], "\n\n");
-*/
 	end
 endmodule
